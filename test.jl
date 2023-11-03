@@ -36,11 +36,15 @@ if verb>0       # plot soln and geom
     ugg += lapchgmat(gg,s0)[:]              # add in u_inc
     fig,ax,h = heatmap(g,g,reshape(ugg,ng,ng), axis=(aspect=DataAspect(),))
     h.colorrange=0.2*[-1,1]; h.colormap=:jet
-    scatter!(s[:,1],s[:,2],color=:red)
-    scatter!(t[:,1],t[:,2],color=:black)
-    scatter!(s0[1],s0[2],color=:green)
+    scatter!(s[:,1],s[:,2],color=:red, label="proxy src")
+    scatter!(t[:,1],t[:,2],color=:black, label="surf")
+    scatter!(s0[1],s0[2],color=:green, label="inc src")
+    axislegend()
     Colorbar(fig[1,2],h)
-    fig   # don't need to display(fig) in vscode
+    ax.title=L"ext Dir BVP w/ given net chg, showing $u_{tot}$"
+    fig   # don't need to display(fig) in vscode or REPL
 end
+
+# question is if complication of const term too confusing for elastance?
 
 
