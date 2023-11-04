@@ -31,7 +31,7 @@ ut,gradut = lapchgeval(t,s,co[1:N])    # mfs eval on surf
 ut .+= co[end]    # add in const term
 re = norm(ut+uinc)/norm(uinc)              # rel surf error 
 @printf "solved\trelresid=%.3g, bdryrelerr=%.3g, norm(c)=%.3g\n" r re norm(co)
-fluxt = dot(tw,sum(gradut.*tn,dims=2))     # surf integral of u_n
+fluxt = dot(tw,sum(gradut.*tn,dims=2))     # surf integral u_n (uinc_n flux=0)
 @printf "\ttot charge err=%.3g (via co), %.3g (u_n)\n" sum(co[1:N])-Sig fluxt-Sig
 if verb>0       # plot soln and geom
     ng=300; g = range(-2,2,ng); o=ones(size(g)); gg=[kron(o,g) kron(g,o)]
