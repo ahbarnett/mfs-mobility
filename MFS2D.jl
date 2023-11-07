@@ -1,7 +1,7 @@
 module MFS2D
-export lapchgpotmat, lapchgeval
+export lap2dchgpotmat, lap2dchgeval
 """
-A = lapchgpotmat(t, s)
+A = lap2dchgpotmat(t, s)
 
 Fill dense MFS matrix for 2D Laplace fundamental solution, plain
 charges to potentials.
@@ -10,7 +10,7 @@ Kernel is (1/2pi) log(1/r). No augmentation by any const term.
 t is M*2 target coords, s is N*2 source coords.
 A is M*N
 """
-function lapchgpotmat(t, s)
+function lap2dchgpotmat(t, s)
     N = size(s,1)
     M = size(t,1)
 	@assert size(s,2)==2  # check dim
@@ -29,7 +29,7 @@ function lapchgpotmat(t, s)
 end
 
 """
-u,gradu = lapchgeval(t, s, co)
+u,gradu = lap2dchgeval(t, s, co)
 
 Direct summation of 2D Laplace fundamental solutions, charges to potentials
 and gradients. Kernel is (1/2pi) log(1/r). No const term.
@@ -37,7 +37,7 @@ and gradients. Kernel is (1/2pi) log(1/r). No const term.
 t is M*2 target coords, s is N*2 source coords, co is (N,) coeff vec
 Outputs: u is (M,), gradu is (M,2)
 """
-function lapchgeval(t, s, co)
+function lap2dchgeval(t, s, co)
     N = size(s,1)
     M = size(t,1)     # num targs
 	@assert size(s,2)==2  # check dim

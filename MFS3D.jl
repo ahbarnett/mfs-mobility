@@ -1,8 +1,8 @@
 module MFS3D
-export lapchgpotmat, lapchgeval
+export lap3dchgpotmat, lap3dchgeval
 
 """
-A = lapchgpotmat(t, s)
+A = lap3dchgpotmat(t, s)
 
 Fill dense MFS matrix for 3D Laplace fundamental solution, plain
 charges to potentials.
@@ -12,7 +12,7 @@ t target coords (M,3)
 s source coords (N,3)
 Output: A is target-from-source matrix (M,N)
 """
-function lapchgpotmat(t, s)
+function lap3dchgpotmat(t, s)
     N = size(s,1)
     M = size(t,1)
 	@assert size(s,2)==3  # check dim
@@ -31,7 +31,7 @@ function lapchgpotmat(t, s)
 end
 
 """
-u,gradu = lapchgeval(t, s, co)
+u,gradu = lap3dchgeval(t, s, co)
 
 Direct summation of 3D Laplace fundamental solutions, charges to potentials
 and gradients. Kernel is 1/(4pi.r).
@@ -41,7 +41,7 @@ s source coords (N,3)
 co coeff vector (N,)
 Outputs: u is (M,), gradu is (M,3)
 """
-function lapchgeval(t, s, co)
+function lap3dchgeval(t, s, co)
     N = size(s,1)
     M = size(t,1)     # num targs
 	@assert size(s,2)==3  # check dim
