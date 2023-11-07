@@ -62,7 +62,7 @@ N<=Nmax, with N also <= 180, the largest design available.
 
 Also see: [`getavailablesphdesigns`](@ref)
 """
-function sphdesign_by_points(Nmax::Integer=1202)
+function sphdesign_by_points(Nmax::Integer=969)
     Ns = getavailablesphdesigns()
     t = findlast(N -> N<=Nmax, Ns)        # degree
     @assert !isnothing(t) "no possible N match your Nmax!"
