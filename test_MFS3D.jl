@@ -1,4 +1,5 @@
-# test MFS3D
+# test MFS3D: for now, grad u in SLP, and SVD for spheres.
+# Barnett 11/08/23
 
 include("MFS3D.jl")   # our local module
 using .MFS3D
@@ -18,14 +19,14 @@ for Na in 500:500:2000    # upper limits for N
     @printf "\tN=%d:\tflux err=%.3g\n" N flux-1.0
 end
 
-Na = 1202   # eg 1202 is common to both types
+Na = 1202   # eg 1202 is common to SD and Leb types
 Ma = 3000
 R = 0.7     # src pt radius
 @printf "test sph MFS, compare proxy sph types (Na=%d)...\n" Na
-sph_funcs = [get_sphdesign, get_lebedev]      # quad choices
-sph_names = ["sph design", "Lebedev"]
+sph_funcs = [get_sphdesign, get_lebedev, get_fibonacci]      # quad choices
+sph_names = ["sph design", "Lebedev", "Fibonacci"]
 fig = Figure(); ax = Axis(fig[1,1], xlabel=L"j", ylabel=L"\sigma_j", yscale=log10)
-ax.title="Singular values of A matrix, 3D Laplace sphere, R=$R, two point choices"
+ax.title="Singular values of A matrix, 3D Laplace sphere, R=$R, various sph pt choices"
 for (i,sph_pts) in enumerate(sph_funcs)
     Y,_ = sph_pts(Na)
     Y *= R
@@ -34,7 +35,7 @@ for (i,sph_pts) in enumerate(sph_funcs)
     @printf "\t%s with N=%d src and M=%d colloc\n" sph_names[i] N M
     A = lap3dchgpotmat(X,Y)
     sigs = svd(A).S
-    scatterlines!(sigs, label=@sprintf "%s N=%d M=%d" sph_names[i] N M)
+    scatterlines!(sigs, markersize=4, label=@sprintf "%s N=%d M=%d" sph_names[i] N M)
 end
 axislegend()
 display(fig)
