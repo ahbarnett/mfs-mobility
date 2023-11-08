@@ -1,4 +1,6 @@
 using DelimitedFiles         # for text file reading
+using Printf
+using Lebedev
 
 """
 x,w,nx = unitcircle(N::Integer)
@@ -52,20 +54,20 @@ function getavailablesphdesigns()
 end
 
 """
-    X, w = sphdesign_by_points(Nmax)
+    X, w = get_sphdesign(Nmax)
 
 Returns the largest spherical design (quadrature points on S^2) with
 no more than `Nmax` points. `X` is the (N,3) coordinate array in R^3
 of the N points, and `w`, a (N,) column vector of their corresponding
-weights. (The weights are equal, thus easily calculated by the user anyway.)
+weights, w.r.t. surface measure on S^2. (The weights are equal, thus easily calculated by the user anyway.)
 N<=Nmax, with N also <= 180, the largest design available.
 
 Also see: [`getavailablesphdesigns`](@ref)
 """
-function sphdesign_by_points(Nmax::Integer=969)
+function get_sphdesign(Nmax::Integer=1000)
     Ns = getavailablesphdesigns()
     t = findlast(N -> N<=Nmax, Ns)        # degree
-    @assert !isnothing(t) "no possible N match your Nmax!"
+    @assert !isnothing(t) "no available N are <= requested Nmax!"
     N = Ns[t]     # the largest N not exceeding Nmax
     fnam = @sprintf "sf%.3d.%.5d" t N     # reverse-engineer filename
     absfnam = string(@__DIR__,"/sphdesigns/",fnam)
@@ -73,4 +75,23 @@ function sphdesign_by_points(Nmax::Integer=969)
     @assert size(X,1)==N "read wrong number of lines from file!"
     w = ones(N)*(4pi/N)
     X,w
-end 
+end
+
+"""
+    X, w = get_lebedev(Nmax)
+
+Returns the largest Lebedev quadrature (points on S^2) with
+no more than `Nmax` points, using the Lebedev.jl package.
+`X` is the (N,3) coordinate array in R^3
+of the N points, and `w`, a (N,) column vector of their corresponding
+weights w.r.t. surface element on S^2. N<=Nmax.
+"""
+function get_lebedev(Nmax::Integer=1000)
+    Ns = getavailablepoints()
+    N = maximum(Ns[Ns .<= Nmax])
+    @assert !isempty(N) "no available N are <= requested Nmax!"
+    x,y,z,w = lebedev_by_points(N)
+    X = [x y z]
+    w = 4pi*w         # make w.r.t. surf measure
+    X,w
+end

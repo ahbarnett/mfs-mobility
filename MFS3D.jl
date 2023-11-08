@@ -22,7 +22,7 @@ function lap3dchgpotmat(t, s)
         for j = 1:N
             d1 = s[j,1] - t[i,1]
             d2 = s[j,2] - t[i,2]
-            d2 = s[j,3] - t[i,3]
+            d3 = s[j,3] - t[i,3]
             rr = d1*d1 + d2*d2 + d3*d3
             A[i,j] = 1/(4pi*sqrt(rr))
         end
@@ -39,6 +39,7 @@ and gradients. Kernel is 1/(4pi.r).
 t target coords (M,3)
 s source coords (N,3)
 co coeff vector (N,)
+
 Outputs: u is (M,), gradu is (M,3)
 """
 function lap3dchgeval(t, s, co)
