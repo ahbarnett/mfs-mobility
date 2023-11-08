@@ -85,6 +85,8 @@ no more than `Nmax` points, using the Lebedev.jl package.
 `X` is the (N,3) coordinate array in R^3
 of the N points, and `w`, a (N,) column vector of their corresponding
 weights w.r.t. surface element on S^2. N<=Nmax.
+
+Matches the behavior of [`get_sphdesign`](@ref)
 """
 function get_lebedev(Nmax::Integer=1000)
     Ns = getavailablepoints()

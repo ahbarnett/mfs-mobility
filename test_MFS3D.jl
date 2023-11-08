@@ -20,13 +20,15 @@ end
 
 Na = 1202   # eg 1202 is common to both types
 Ma = 3000
+R = 0.7     # src pt radius
 @printf "test sph MFS, compare proxy sph types (Na=%d)...\n" Na
 sph_funcs = [get_sphdesign, get_lebedev]      # quad choices
 sph_names = ["sph design", "Lebedev"]
 fig = Figure(); ax = Axis(fig[1,1], xlabel=L"j", ylabel=L"\sigma_j", yscale=log10)
+ax.title="Singular values of A matrix, 3D Laplace sphere, R=$R, two point choices"
 for (i,sph_pts) in enumerate(sph_funcs)
     Y,_ = sph_pts(Na)
-    Y *= 0.7                   # src radius
+    Y *= R
     X, w = sph_pts(Ma)
     N,M = size(Y,1),length(w)
     @printf "\t%s with M=%d surf and N=%d srcs\n" sph_names[i] M N
