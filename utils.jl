@@ -97,3 +97,41 @@ function get_lebedev(Nmax::Integer=1000)
     w = 4pi*w         # make w.r.t. surf measure
     X,w
 end
+
+"""
+    X,w = get_fibonacci(N)
+
+Returns `X` a (N,3) array of coordinates of `N` Fibonacci points on S^2
+(the unit sphere), and `w` a (N,) vector of their equal weights w.r.t.
+surface measure. `N` may be any positive integer.
+
+Note: these weights are *not* high-order accurate for quadrature, since
+such a set of weights is not discussed in literature for the Fibonacci point family.
+
+See:
+Richard Swinbank, James Purser, "Fibonacci grids: A novel approach to global modelling,"
+Quarterly Journal of the Royal Meteorological Society, Volume 132, Number 619, July 2006 Part B, pages 1769-1793.
+
+R. Marques, C. Bouville, K. Bouatouch, and J. Blat, "Extensible Spherical Fibonacci Grids," IEEE
+Transactions on Visualization and Computer Graphics, vol. 27, no. 4, pp. 2341–2354, 2021 doi:
+10.1109/TVCG.2019.2952131
+
+Matches the behavior of [`get_sphdesign`](@ref)
+"""
+function get_fibonacci(N::Integer=1000)
+    Phi = (1+sqrt(5.0))/2
+    dphi = 2pi/Phi         # azimuth regular spacing
+    X = zeros(N,3)
+    for j=1:N              # loop over pts
+        X[j,3] = 1 - (2j-2)/N       # z, not symmetrically shifted
+        phi = dphi*(j-1)            # matching Broms
+        (s,c) = sincos(phi)
+        rho = sqrt(1-X[j,3]^2)
+        X[j,1] = rho*c
+        X[j,2] = rho*s
+    end
+    w = (4pi/N)*ones(N)    # dummy weights for now
+    X,w
+end
+
+
