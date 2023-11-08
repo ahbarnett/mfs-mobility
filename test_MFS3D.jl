@@ -31,10 +31,10 @@ for (i,sph_pts) in enumerate(sph_funcs)
     Y *= R
     X, w = sph_pts(Ma)
     N,M = size(Y,1),length(w)
-    @printf "\t%s with M=%d surf and N=%d srcs\n" sph_names[i] M N
+    @printf "\t%s with N=%d src and M=%d colloc\n" sph_names[i] N M
     A = lap3dchgpotmat(X,Y)
     sigs = svd(A).S
-    scatterlines!(sigs, label=@sprintf "%s M=%d N=%d" sph_names[i] M N)
+    scatterlines!(sigs, label=@sprintf "%s N=%d M=%d" sph_names[i] N M)
 end
 axislegend()
 display(fig)

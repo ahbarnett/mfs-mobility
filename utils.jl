@@ -56,11 +56,11 @@ end
 """
     X, w = get_sphdesign(Nmax)
 
-Returns the largest spherical design (quadrature points on S^2) with
+Load then returns the largest spherical design (quadrature points on S^2) with
 no more than `Nmax` points. `X` is the (N,3) coordinate array in R^3
 of the N points, and `w`, a (N,) column vector of their corresponding
 weights, w.r.t. surface measure on S^2. (The weights are equal, thus easily calculated by the user anyway.)
-N<=Nmax, with N also <= 180, the largest design available.
+N<=Nmax, with N also <= 180, the largest design available in Wormseley's files.
 
 Also see: [`getavailablesphdesigns`](@ref)
 """
@@ -72,7 +72,7 @@ function get_sphdesign(Nmax::Integer=1000)
     fnam = @sprintf "sf%.3d.%.5d" t N     # reverse-engineer filename
     absfnam = string(@__DIR__,"/sphdesigns/",fnam)
     X = readdlm(absfnam)
-    @assert size(X,1)==N "read wrong number of lines from file!"
+    @assert size(X,1)==N "read wrong number of lines from file! Please see sphdesigns/README"
     w = ones(N)*(4pi/N)
     X,w
 end
