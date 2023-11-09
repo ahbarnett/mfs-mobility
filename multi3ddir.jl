@@ -16,7 +16,7 @@ using Random                  # so can set seed
 
 verb = 1  # verbosity
 # setup and solve 1 sphere
-Na = 1000       # upper limit for N, conv param
+Na = 1200       # upper limit for N, conv param
 Mratio = 1.2
 Rp = 0.7
 reps = 1e-14    # pseudoinv regularization cutoff
@@ -106,6 +106,7 @@ uinct = uinc.(eachrow(XXt))
 if verb>0
     GLMakie.activate!(title="test pt BC residuals")
     fig2,ax2,l2 = scatter(XXt[:,1],XXt[:,2],XXt[:,3],color=bcerr,markersize=5)
+    l2.colorrange=norm(bcerr,Inf)*[-1,1]
     l2.colormap=:jet; Colorbar(fig2[1,2],l2)
     zoom!(ax2.scene,0.5)
     display(GLMakie.Screen(), fig2)
