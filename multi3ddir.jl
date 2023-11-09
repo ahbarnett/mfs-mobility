@@ -1,4 +1,7 @@
 # test 3D multi-sphere (monodisperse) Dir BVP via 1-body MFS precond
+# Results:
+#   uinc(x)=x_3, N=700 easy gets 1e-6 for K=10 d=0.1.
+#   uinc(x)=k (sph #), N=1000 gets 1e-4 for K=10 d=0.1.
 # Barnett 11/08/23
 
 include("MFS3D.jl")
@@ -25,14 +28,14 @@ M = length(w)
 A = lap3dchgpotmat(X, Y)
 F = svd(A)
 #rankA = sum(F.S>reps)   # *** to do
-Z = F.Vt' * Diagonal(1 ./ F.S)    # so pseudoinv applies via A^+ b = Z*(F.U'*b)
+Z = F.Vt' * Diagonal(1 ./ F.S)   # so pseudoinv apply A^+ b = Z*(F.U'*b)
 println("sphere: N=$N, M=$M, sing vals rng ", extrema(F.S), " cond(A)=", F.S[1] / F.S[end])
 b = X[:,2]              # a smooth test vec on surf
 @printf "\tcheck pinv A works on smooth vec: %.3g\n" norm(A \ b - Z * (F.U' * b)) / norm(b)
 
-K = 5   # make cluster of K unit spheres near each other (dumb K^2 alg)
-deltamin = 0.2    # min sphere separation; let's achieve it
-Xc = zeros(K, 3)  # center coords of spheres
+K = 10   # make cluster of K unit spheres near each other (dumb K^2 alg)
+deltamin = 0.1    # min sphere separation; let's achieve it
+Xc = zeros(K, 3)  # center coords of spheres (todo: make func)
 k = 2             # index of next sphere to create
 Random.seed!(0)
 while k <= K
@@ -64,9 +67,10 @@ end
 if verb>0
     fig,ax,l = scatter(XX[:,1],XX[:,2],XX[:,3],color=1:K*M,markersize=3)
     zoom!(ax.scene,0.5)
+    display(fig)
 end
 
-AAoffdiag = lap3dchgpotmat(XX, YY)    # full dense system mat
+AAoffdiag = lap3dchgpotmat(XX, YY)   # fill full system mat (!)
 # *** to do: make an applier without fill, or FMM wrapper.
 for k=1:K      # kill each diag block
     AAoffdiag[M*(k-1).+(1:M),N*(k-1).+(1:N)] .= 0
@@ -86,7 +90,9 @@ function blkprecond(g)
     co
 end
 
-uinc(x) = x[3]  # incident (applied) pot, expects 3-vec. Efield=(0,0,-1)
+# choose type of Dirichlet data
+#uinc(x) = x[3]  # incident (applied) pot, expects 3-vec. Efield=(0,0,-1)
+uinc(x) = Float64(findmin(sum((Xc .- x').^2,dims=2))[2][1])  # kth sphere gets pot=k
 rhs = -uinc.(eachrow(XX))          # eval uinc all surf nodes
 matvec(g) = g + AAoffdiag*blkprecond(g)    # R-precond MFS trick
 matvecop = LinearMap(g -> matvec(g), M*K)  # hmm, has to be easier way :(
@@ -95,5 +101,12 @@ g,stats = gmres(matvecop, rhs; restart=false, rtol=1e-6, history=true, verbose=0
 # check soln err by getting co then using for direct eval...
 co = blkprecond(g)
 uinct = uinc.(eachrow(XXt))
-bcerr = uinct .+ lap3dchgeval(XXt,YY,co)[1]
+@time bcerr = uinct .+ lap3dchgeval(XXt,YY,co)[1]
 @printf "rel max err at %d surf test pts: %.3g\n" K*Mt norm(bcerr,Inf)/norm(uinct,Inf)
+if verb>0
+    GLMakie.activate!(title="test pt BC residuals")
+    fig2,ax2,l2 = scatter(XXt[:,1],XXt[:,2],XXt[:,3],color=bcerr,markersize=5)
+    l2.colormap=:jet; Colorbar(fig2[1,2],l2)
+    zoom!(ax2.scene,0.5)
+    display(GLMakie.Screen(), fig2)
+end
