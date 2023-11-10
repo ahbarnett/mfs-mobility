@@ -9,17 +9,17 @@ using Printf
 
 verb = 1
 x0 = [1.1,0.8,-0.4]'      # u inc src point near-ish to unit sphere
-R = 0.7                   # MFS source radius
+Rp = 0.7                   # MFS source radius
 if verb>0 fig = Figure(); ax = Axis(fig[1,1], yscale=log10, xlabel=L"N", ylabel="rel surf err"); end
 for sph_pts = [get_sphdesign, get_lebedev, get_fibonacci]   # which type of surf discr
 Nas = 300:300:2000        # conv study: upper limits for N
 Mratio = 1.5              # desired M/N  (Lebedev fails, M=N, if close to 1)
-@printf "1-body ext Lap Dir 3D conv (scatt BVP, src dist %.3g, R=%g, %s)...\n" norm(x0) R string(sph_pts)
+@printf "1-body ext Lap Dir 3D conv (scatt BVP, src dist %.3g, Rp=%g, %s)...\n" norm(x0) Rp string(sph_pts)
 Ns = similar(Nas)
 es = zeros(size(Ns))      # record errors
 for (i,Na) in enumerate(Nas)
     Y,_ = sph_pts(Na)
-    Y *= R
+    Y *= Rp
     N = Ns[i] = size(Y,1)                  # actual num sph pts
     X, w = sph_pts(Int(ceil(Mratio*N)))
     M = length(w)
@@ -32,7 +32,7 @@ for (i,Na) in enumerate(Nas)
     re = es[i] = norm(ut+uinc)/norm(uinc)  # rel surf pot error 
     @printf "N=%d M=%d relresid=%.3g bdryrelerr=%.3g norm(c)=%.3g\n" N M r re norm(co)
     flux = dot(w,sum(gradut.*X,dims=2))    # surf int u_n (uinc_n flux=0)
-    @printf "\ttot chg=%.12g (err vs u_n flux %.3g)\n" sum(co) sum(co)-flux
+    @printf "\ttot chg=%.12g (err vs -flux %.3g)\n" sum(co) sum(co)+flux
 end
 #fig,ax,l = scatterlines(Ns,es, axis = (yscale=log10,), xlabel=L"N", ylabel="rel surf err")
 if verb>0 scatterlines!(Ns,es, label=string(sph_pts)) end
