@@ -55,7 +55,7 @@ function lap2dchgeval(t, s, co)
 			gradu[i,2] += d2*tmp
         end
 		u[i] *= -1/4pi
-		gradu[i,:] *= -1/2pi
+		gradu[i,:] *= 1/2pi
     end
 	u, gradu
 end
