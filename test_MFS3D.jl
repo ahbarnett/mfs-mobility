@@ -16,7 +16,7 @@ for Na in 500:500:2000    # upper limits for N
     N = length(w)                         # actual num sph pts
     ut,gradut = lap3dchgeval(X,x0,1.0)    # unit chg at x0
     flux = dot(w, sum(gradut.*X,dims=2))  # surf int u_n (nx=X)
-    @printf "\tN=%d:\tflux err=%.3g\n" N flux-1.0
+    @printf "\tN=%d:\tflux err=%.3g\n" N flux+1.0  # true val -1
 end
 
 Na = 1202   # eg 1202 is common to SD and Leb types

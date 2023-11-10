@@ -63,7 +63,7 @@ function lap3dchgeval(t, s, co)
 			gradu[i,3] += d3*tmp
         end
 		u[i] *= 1/4pi
-		gradu[i,:] *= -1/4pi
+		gradu[i,:] *= 1/4pi
     end
 	u, gradu
 end
