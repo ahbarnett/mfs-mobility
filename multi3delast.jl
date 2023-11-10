@@ -13,11 +13,11 @@ using Krylov
 using LinearMaps             # needed by Krylov
 using GLMakie
 using Printf
-using Random                  # so can set seed
+using Random                 # so can set seed
 
 verb = 1                     # verbosity (0=no figs, 1=figs)
-elast = false                # false: solve Dir BVP. true: elastance BVP
-roundtripchk = true          # false: use sphvals. true: load data (needs file)
+elast = true                 # false: solve Dir BVP. true: elastance BVP
+roundtripchk = false         # false: use sphvals. true: load data (needs file)
 Na = 1200                    # conv param (upper limit for N)
 Mratio = 1.2                 # approx M/N for MFS colloc/proxy
 Rp = 0.7                     # proxy radius
@@ -112,7 +112,8 @@ if !elast   # Dirichlet BVP; pick data *** to make backgnd uinc switchable?
     #uinc(x) = x[3]  # incident (applied) pot, expects 3-vec. Efield=(0,0,-1)
     if roundtripchk vs=readdlm("data/multi3d_pots.dat")    # output of elastance
     else vs = sphvals end
-    uinc(x) = vs[findmin(sum((Xc .- x').^2,dims=2))[2][1]]  # kth sph gets vs[k]
+    # sign err was here: need rhs to be sphvals, not uinc (scatt prob)...
+    uinc(x) = -vs[findmin(sum((Xc .- x').^2,dims=2))[2][1]]  # kth sph gets vs[k]
     rhs = -uinc.(eachrow(XX))          # eval uinc all surf nodes
     matvec(g) = g + AAoffdiag*blkprecond(g)    # R-precond MFS sys
 else        # elastance BVP. Use "completion" potential...
