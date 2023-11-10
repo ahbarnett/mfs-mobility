@@ -1,7 +1,8 @@
 # test 3D multi-sphere (monodisperse) Dir/elastance BVPs
 # via dense iterative solve of 1-body precond MFS. 
-# Try L (1s-matrix, ie, orthog projector) tricks.
-# Based on multi3ddir.jl 
+# Try L (1s-matrix, ie, orthog projector) and Lr perturbs.
+# Incorporates multi3ddir.jl (via elast=false).
+# Has roundtripchk: loads ans from other BVP & chks recovers known
 # Barnett 11/09/23
 
 include("MFS3D.jl")
@@ -15,28 +16,30 @@ using Printf
 using Random                  # so can set seed
 
 verb = 1                     # verbosity (0=no figs, 1=figs)
-elast = true                 # false: plain Dir BVP, true: elastance BVP 
+elast = false                # false: solve Dir BVP. true: elastance BVP
+roundtripchk = true          # false: use sphvals. true: load data (needs file)
 Na = 1200                    # conv param (upper limit for N)
 Mratio = 1.2                 # approx M/N for MFS colloc/proxy
 Rp = 0.7                     # proxy radius
 K = 10                       # num spheres (keep small since (MK)^2 cost)
 deltamin = 0.1               # min sphere separation; let's achieve it
+sphvals = range(1.0,K)       # test data for v_k (Dir) or q_k (elast)
 
 # setup and solve 1 sphere...
-Y, _ = get_sphdesign(Na)
+Y,_ = get_sphdesign(Na)
 Y *= Rp
 N = size(Y, 1)                  # actual num proxy pts
 X, w = get_sphdesign(Int(ceil(Mratio * N)))
 M = length(w)
-A = lap3dchgpotmat(X, Y)
-if elast @printf "elastance case\n"
+A = lap3dchgpotmat(X, Y)        # a.k.a. S (single-layer matrix)
+if elast @printf "elastance case: perturbing S to S(I-L)+Lr ...\n"
     L = fill(1.0/N, (N,N))      # square 1s mat, I-L kills const
     Lr = fill(1.0/N, (M,N))     # rect 1s mat
     A = A*(I-L) + Lr            # perturb; unkn const V = -Lr.co
 end
 F = svd(A)
 Z = F.Vt' * Diagonal(1 ./ F.S)   # so pseudoinv apply A^+ b = Z*(F.U'*b)
-println("sphere: N=$N, M=$M, sing vals rng ", extrema(F.S), " cond(A)=", F.S[1] / F.S[end])
+println("sphere: N=$N, M=$M, sing vals in ", extrema(F.S), " cond(A)=", F.S[1] / F.S[end])
 b = X[:,2]              # a smooth test vec on surf
 @printf "\tcheck pinv A works on smooth vec: %.3g\n" norm(A \ b - Z * (F.U' * b)) / norm(b)
 
@@ -105,13 +108,16 @@ function blkorthogL(co)  # apply (I-L) to each block, allocating
     out
 end
 
-if !elast   # Dirichlet BVP; pick data *** to make switchable
+if !elast   # Dirichlet BVP; pick data *** to make backgnd uinc switchable?
     #uinc(x) = x[3]  # incident (applied) pot, expects 3-vec. Efield=(0,0,-1)
-    uinc(x) = Float64(findmin(sum((Xc .- x').^2,dims=2))[2][1])  # kth sphere gets pot=k
+    if roundtripchk vs=readdlm("data/multi3d_pots.dat")    # output of elastance
+    else vs = sphvals end
+    uinc(x) = vs[findmin(sum((Xc .- x').^2,dims=2))[2][1]]  # kth sph gets vs[k]
     rhs = -uinc.(eachrow(XX))          # eval uinc all surf nodes
     matvec(g) = g + AAoffdiag*blkprecond(g)    # R-precond MFS sys
 else        # elastance BVP. Use "completion" potential...
-    chgs = range(1.0,K)    # pick q_k = k   *** read from file
+    if roundtripchk chgs=readdlm("data/multi3d_chgs.dat")   # output of Dir BVP
+    else chgs = sphvals end
     co0 = kron(chgs,fill(1.0/N,N))       # stack completion dens
     u0(X) = lap3dchgeval(X,YY,co0)[1]    # completion pot evaluator
     rhs = -u0(XX)
@@ -123,21 +129,29 @@ g,stats = gmres(matvecop, rhs; restart=false, rtol=1e-6, history=true, verbose=0
 # check soln err by getting co, then direct eval @ test pts...
 co = blkprecond(g)
 if !elast          # Dir BVP
+    chgs = [sum(co[N*(k-1).+(1:N)]) for k in 1:K]  # get q_k & save...
+    if roundtripchk        # compare against known ans from other BVP type...
+        @printf "roundtripchk: max rel q_k err %.3g\n" norm(sphvals.-chgs,Inf)/norm(sphvals,Inf)
+    else writedlm("data/multi3d_chgs.dat", chgs)   # in pkg via utils
+    end
     uinct = uinc.(eachrow(XXt))      # u_inc @ test pts
     @time bcerr = uinct .+ lap3dchgeval(XXt,YY,co)[1]  # the rep
     @printf "Dir rel max err at %d surf test pts: %.3g\n" K*Mt norm(bcerr,Inf)/norm(uinct,Inf)
-    chgs = [sum(co[N*(k-1).+(1:N)]) for k in 1:K]  # get q_k & save...
-    writedlm("multi3d_chgs.dat", chgs)   # utils brought in pkg
 else               # elastance: eval the rep ut & chk voltages
     vs = [-mean(co[(k-1)*N.+(1:N)]) for k=1:K]    # voltages out 
+    if roundtripchk
+        @printf "roundtripchk: max rel v_k err %.3g\n" norm(sphvals.-vs,Inf)/norm(sphvals,Inf)
+
+    else writedlm("data/multi3d_pots.dat", vs)
+    end
     @time ut = lap3dchgeval(XXt,YY,blkorthogL(co) .+ co0)[1]  # the rep
     bcerr = ut .- kron(vs,ones(Mt))    # compare surf voltages
     @printf "Elast rel max err at %d surf test pts: %.3g\n" K*Mt norm(bcerr,Inf)/norm(vs,Inf)
 end
 if verb>0
-    GLMakie.activate!(title="BC residuals @ test pts")
+    GLMakie.activate!(title="multi3d: BC residuals @ test pts")
     fig2,ax2,l2 = scatter(XXt[:,1],XXt[:,2],XXt[:,3],color=bcerr,markersize=5)
-    l2.colorrange=norm(bcerr,Inf)*[-1,1]
+    l2.colorrange = norm(bcerr,Inf)*[-1,1]     # symmetric colors
     l2.colormap=:jet; Colorbar(fig2[1,2],l2)
     zoom!(ax2.scene,0.5)
     display(GLMakie.Screen(), fig2)
