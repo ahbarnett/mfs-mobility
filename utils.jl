@@ -134,4 +134,4 @@ function get_fibonacci(N::Integer=1000)
     X,w
 end
 
-
+mean(x) = sum(x)/length(x)       # not in base, weirdly
