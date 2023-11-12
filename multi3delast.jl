@@ -16,14 +16,14 @@ using Printf
 using Random                 # so can set seed
 
 verb = 1                     # verbosity (0=no figs, 1=figs)
-elast = true                 # false: solve Dir BVP. true: elastance BVP
+elast = false                 # false: solve Dir BVP. true: elastance BVP
 roundtripchk = false         # false: use sphvals. true: load data (needs file)
-Na = 1200                    # conv param (upper limit for N)
+Na = 1000                    # conv param (upper limit for N)
 Mratio = 1.2                 # approx M/N for MFS colloc/proxy
-Rp = 0.7                     # proxy radius
-K = 10                       # num spheres (keep small since (MK)^2 cost)
+Rp = 0.7                    # proxy radius
+K = 2                       # num spheres (keep small since (MK)^2 cost)
 deltamin = 0.1               # min sphere separation; let's achieve it
-sphvals = range(1.0,K)       # test data for v_k (Dir) or q_k (elast)
+sphvals = range(0.0,K-1)     # test data for v_k (Dir, fixed for C12 chk) or q_k (elast)
 
 # setup and solve 1 sphere...
 Y,_ = get_sphdesign(Na)
@@ -125,7 +125,7 @@ else        # elastance BVP. Use "completion" potential...
     matvec(g) = g + AAoffdiag*blkorthogL(blkprecond(g))  # R-precond MFS sys
 end
 matvecop = LinearMap(g -> matvec(g), M*K)  # hmm, has to be easier way :(
-g,stats = gmres(matvecop, rhs; restart=false, rtol=1e-6, history=true, verbose=0)
+g,stats = gmres(matvecop, rhs; restart=false, rtol=1e-7, history=true, verbose=0)
 @printf "GMRES done: niter=%d, relres=%.3g, in %.3g sec\n" stats.niter stats.residuals[end]/norm(rhs) stats.timer
 # check soln err by getting co, then direct eval @ test pts...
 co = blkprecond(g)
@@ -157,3 +157,11 @@ if verb>0
     zoom!(ax2.scene,0.5)
     display(GLMakie.Screen(), fig2)
 end
+
+if K==2 && !elast && !roundtripchk  # chk analytic capacitance (Lebedev et al '65 as in Cheng'01)
+    beta = acosh(1+deltamin/2)    # acosh(l), since we built delta=deltamin
+    C12 = sinh(beta) * sum([exp(-(2n+1)beta)/sinh((2n+1)beta) for n=0:20])
+    @printf "C12_anal=%.8g: our q_1 rel err %.8g\n" C12 C12+chgs[1]/4pi
+    # note C12 is *not* chgs[1] when antisymm voltage vs=[-1 1]. Need [0 1].
+end
+
