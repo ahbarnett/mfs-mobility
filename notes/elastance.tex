@@ -1,0 +1,326 @@
+% use pdflatex
+\documentclass[10pt]{article}
+\oddsidemargin = 0.2in
+\topmargin = -0.5in
+\textwidth 6in
+\textheight 8.5in
+
+\usepackage{graphicx,bm,hyperref,amssymb,amsmath,amsthm}
+\usepackage{algorithmic,xcolor}
+
+\usepackage{showlabels}
+
+% -------------------------------------- macros --------------------------
+% general ...
+\newcommand{\bi}{\begin{itemize}}
+\newcommand{\ei}{\end{itemize}}
+\newcommand{\ben}{\begin{enumerate}}
+\newcommand{\een}{\end{enumerate}}
+\newcommand{\be}{\begin{equation}}
+\newcommand{\ee}{\end{equation}}
+\newcommand{\bea}{\begin{eqnarray}} 
+\newcommand{\eea}{\end{eqnarray}}
+\newcommand{\ba}{\begin{align}} 
+\newcommand{\ea}{\end{align}}
+\newcommand{\bse}{\begin{subequations}} 
+\newcommand{\ese}{\end{subequations}}
+\newcommand{\bc}{\begin{center}}
+\newcommand{\ec}{\end{center}}
+\newcommand{\bfi}{\begin{figure}}
+\newcommand{\efi}{\end{figure}}
+\newcommand{\ca}[2]{\caption{#1 \label{#2}}}
+\newcommand{\ig}[2]{\includegraphics[#1]{#2}}
+\newcommand{\bmp}[1]{\begin{minipage}{#1}}
+\newcommand{\emp}{\end{minipage}}
+\newcommand{\pig}[2]{\bmp{#1}\includegraphics[width=#1]{#2}\emp} % mp-fig, nogap
+\newcommand{\bp}{\begin{proof}}
+\newcommand{\ep}{\end{proof}}
+\newcommand{\ie}{{\it i.e.\ }}
+\newcommand{\eg}{{\it e.g.\ }}
+\newcommand{\etal}{{\it et al.\ }}
+\newcommand{\pd}[2]{\frac{\partial #1}{\partial #2}}
+\newcommand{\pdc}[3]{\left. \frac{\partial #1}{\partial #2}\right|_{#3}}
+\newcommand{\infint}{\int_{-\infty}^{\infty} \!\!}      % infinite integral
+\newcommand{\tbox}[1]{{\mbox{\tiny #1}}}
+\newcommand{\mbf}[1]{{\mathbf #1}}
+\newcommand{\half}{\mbox{\small $\frac{1}{2}$}}
+\newcommand{\C}{\mathbb{C}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\RR}{\mathbb{R}^2}
+\newcommand{\ve}[4]{\left[\begin{array}{r}#1\\#2\\#3\\#4\end{array}\right]}  % 4-col-vec
+\newcommand{\vt}[2]{\left[\begin{array}{r}#1\\#2\end{array}\right]} % 2-col-vec
+\newcommand{\mt}[4]{\left[\begin{array}{rr}#1&#2\\#3&#4\end{array}\right]} % 2x2, rowwise ordering
+\newcommand{\bigO}{{\mathcal O}}
+\newcommand{\qqquad}{\qquad\qquad}
+\newcommand{\qqqquad}{\qqquad\qqquad}
+\DeclareMathOperator{\Span}{Span}
+\DeclareMathOperator{\im}{Im}
+\DeclareMathOperator{\re}{Re}
+\DeclareMathOperator{\diag}{diag}
+\newtheorem{thm}{Theorem}
+\newtheorem{cnj}[thm]{Conjecture}
+\newtheorem{lem}[thm]{Lemma}
+\newtheorem{cor}[thm]{Corollary}
+\newtheorem{pro}[thm]{Proposition}
+\newtheorem{rmk}[thm]{Remark}
+\newtheorem{dfn}[thm]{Definition}
+% this work...
+\newcommand{\x}{\mathbf{x}}
+\newcommand{\y}{\mathbf{y}}
+\newcommand{\vv}{\mathbf{v}}
+\newcommand{\qq}{\mathbf{q}}
+\newcommand{\n}{\mathbf{n}}
+\newcommand{\f}{\mathbf{f}}
+\newcommand{\bal}{\bm{\alpha}}
+\newcommand{\bga}{\bm{\gamma}}
+\newcommand{\eps}{\varepsilon}
+\newcommand{\emach}{\eps_\tbox{mach}}
+\newcommand{\E}{\R^3\backslash\overline{\Omega}}    % ext domain
+\newcommand{\pO}{\partial\Omega}
+\newcommand{\ok}{^{(k)}}
+\newcommand{\okp}{^{(k')}}
+
+
+\begin{document}
+\title{Method of fundamental solutions for large-scale 3D elastance problems}
+\author{Alex H. Barnett}
+\date{\today}
+\maketitle
+\begin{abstract}
+  The MFS is effective for the 3D Laplace Dirichlet BVP in the
+  exterior of a collection of simple objects, for example, spheres.
+  One-body dense direct preconditioning (following
+  Liu--Barnett) results in a
+  well-conditioned square linear system that may be solved iteratively,
+  with an FMM-accelerated matrix-vector apply,
+  giving a linear-scaling scheme that may solve thousands of spheres
+  in an hour on a workstation.
+  Here we present a scheme for the {\em elastance} BVP in the same
+  geometries, including its one-body preconditioning.
+  This solves the problem of conductors with known net charges
+  but unknown constant potentials.
+  As far as we are aware, the MFS has not been used for such problems
+  in prior literature.
+  We do not discuss issues of MFS representations for
+  close-to-touching spheres, and thus stick to unit spheres with surface
+  separations $\delta \ge 0.1$.
+  The idea is expected to generalize without fuss to the Stokes equations.
+\end{abstract}
+
+\section{The Dirichlet, capacitance and elastance BVPs}
+
+Let $\Omega_k$, $k=1,\dots,K$ be a collection of smooth bounded
+disjoint objects in $\R^3$,
+each of which has boundary $\pO_k$,
+and let $\Omega := \bigcup_k \Omega_k$ denote the collection,
+and $\pO$ denote the union of all boundaries.
+Given boundary voltage data $f$, the  Dirichlet BVP is to find $u$
+such that
+\bea
+\Delta u &=& 0 \qquad \mbox{ in } \E
+\label{pde}
+\\
+u &=& f\qquad\mbox{ on } \pO.
+\label{dbc}
+\eea
+The special case where the data in \eqref{dbc} takes the form
+\be
+u = v_k\qquad\mbox{ on } \pO_k
+\label{vk}
+\ee
+where $v_k\in\R$ is a given constant voltage on the $k$th boundary,
+is called the {\em capacitance} problem,
+and the resulting net charges
+\be
+q_k := -\int_{\pO_k} u_n ds
+\label{qk}
+\ee
+are of interest,
+where $u_n:=\partial u/\partial n = \n\cdot \nabla u$,
+and $\n$ is the outwards unit normal on the boundary.
+
+The solution defines a linear map from the input voltage vector
+$\vv := \{v_k\}_{k=1}^K$ to the output charge vector $\qq := \{q_k\}_{k=1}^K$,
+ie, a positive semidefinite capacitance matrix $C\in \R^{K\times K}$ acting as
+\be
+\qq = C \vv.
+\ee
+The full matrix $C$ could be extracted by solving $K$ of the above BVPs.
+
+The elastance problem is the inverse of the capacitance problem.
+Namely, given $q_k$, $k=1,\dots,K$, one is to find
+the solution potential $u$ obeying the PDE \eqref{pde},
+the given net charges \eqref{qk}, and
+constant on each boundary as in \eqref{vk}.
+The voltages $v_k$ are unknown and must be solved as part of the problem.
+This is equivalent to applying the matrix inverse
+$\vv = C^{-1} \qq$ where $C^{-1}$ is the elastance matrix.
+
+\begin{rmk}
+A useful numerical test is to start with a known $\vv$ vector,
+solve the capacitance problem to get $\qq$, then solve the elastance
+problem with this as input to get an output vector $\vv'$,
+finally reporting the maximum norm of $\vv'-\vv$.
+\end{rmk}
+
+\begin{rmk}
+  The $\R^2$ case is more complicated due to additional constraints
+  on total charge and a more subtle asymptotic form as $|\x|\to\infty$.
+  See \cite{mobility}.
+  Furthermore, in $\R^2$ there are deficiencies in the charge
+  MFS representations on proxy surfaces with unit logarithmic capacity
+  \cite{qfs} that require rank-1 corrections that would interact with the
+  rank-1 corrections below. For this reason we stick to $R^3$.
+  \end{rmk}
+
+\begin{rmk}
+  The Stokes analog of capacitance is the resistance problem,
+  and the analog of elastance is mobility. See \cite{mobility}.
+  \end{rmk}
+
+\section{MFS for the Dirichlet BVP}
+
+Recall the Laplace fundamental solution,
+\be
+\Phi(\x,\y) = \Phi(\x-\y) = \frac{1}{4\pi \|\x-\y\|},
+\ee
+where $\x\in\R^3$ is a target point and $\y\in\R^3$ a source point.
+This obeys $-\Delta \Phi(\cdot,\y) = \delta_\y$ in the distributional
+sense.
+Let $\y\ok_j$, $j=1,\dots,N$ be proxy (source) points inside $\Omega_k$
+and $\x\ok_i$, $i=1,\dots,M$ be collocation (surface) points on $\pO_k$.
+Assume that $N$ and $M$ are independent of the body index $k$ for simplicity.
+Then the block of the MFS matrix $S^{(kk')}$
+from sources in body $k'$ to targets on body $k$
+has entries
+\be
+S^{(kk')}_{ij} = \Phi(\x\ok_i,\y\okp_j), \quad i=1,\dots,M, \quad j=1,\dots,N.
+\ee
+The symbol $S$ reminds one that this matrix is a crude Nystr\"om
+discretization of the 1st-kind layer operator from the $k$'th proxy surface
+to the $k$th boundary.
+The diagonal (self-interaction) matrix $S^{(kk)}$
+is exponentially ill-conditioned as $N$ grows, with $M$ somewhat
+larger than $N$. A typical choice is $M\approx 1.2 N$.
+
+\begin{rmk}
+  For spheres we recommend spherical design points for surface and proxy
+  points \cite{sphdesign},
+which are available for $N$ up to around 16000 at
+\url{https://web.maths.unsw.edu.au/~rsw/Sphere/EffSphDes/}
+Proxy points are scaled to a sphere of radius $R_p \approx 0.7$
+when targeting several digit accuracy in the case of $\Omega_0$ the unit sphere.
+Here $N$ in the range $500$ to $2000$ gives
+$\kappa(S^{(kk)})$ in the range $10^5$ to $10^9$.
+\end{rmk}
+
+In the case $K=1$, the MFS then solves in the least-squares sense the
+formally overdetermined $M\times N$ system with matrix $S^{(11)} = S$,
+\be
+S \bal = \f
+\label{1sys}
+\ee
+where $\f:=\{f(\x_i)\}_{i=1}^M$ is the data at collocation points
+and $\bal:=\{\alpha_j\}_{j=1}^N$ are the proxy strengths.
+For $K=2$ we have
+\be
+\mt{S^{(11)}}{S^{(12)}}{S^{(21)}}{S^{(22)}} \vt{\bal^{(1)}}{\bal^{(2)}} = \vt{\f^{(1)}}{\f^{(2)}}.
+\label{2sys}
+\ee
+We do not write the generalization to $K>2$ since it is obvious.
+In the case where all proxy and collocation point sets are
+translates of those for a single body,
+all self-interaction matrices are the same,
+$S^{(kk)} = S$ for all $k=1,\dots,K$.
+
+Having solved \eqref{2sys} for the stacked solution vector
+$\bal:=\{\bal\ok\}_{k=1}^K$, the representation for the
+solution is
+\be
+u(\x) = \sum_{k=1}^K \sum_{j=1}^N \alpha\ok_j \Phi(\x,\y\ok_j),
+\label{rep}
+\ee
+which we abbreviate by $u = {\cal S}\bal$ by analogy with layer potentials.
+
+The net charges $q_k$ may be extracted either by evaluation of
+\eqref{qk} (which requires an accurate quadrature weights
+for the set of collocation points, and evaluations of $\nabla \Phi$),
+or more conveniently via
+\be
+q_k = \sum_{j=1}^N \alpha\ok_j, \qquad k=1,\dots,K,
+\label{qkgauss}
+\ee
+which follows by Gauss' law for $\Phi$.
+
+
+\section{One-body preconditioning for larger-scale problems}
+
+The full system \eqref{2sys} is large, dense, and ill-conditioned,
+thus not amenable to iterative solution.
+Here we recall how to precondition it to allow an accelerated iterative
+solution.
+Let all self-interaction matrices be the same $S$, for simplicity.
+Let $S = U \Sigma V^T$ be the SVD,
+with $\Sigma$ the diagonal matrix with entries the singular values $\sigma_j$,
+then
+the solution operator to the the system \eqref{1sys}
+is the pseudoinverse
+$$
+\bal = S^+ \f := V \Sigma^+ (U^T \f),
+$$
+where $\Sigma^+$ is the diagonal matrix with entries $1/\sigma_j$.
+(Sometimes regularization is used for small $\sigma_j$.)
+Note that $S^+$ cannot be applied stably by forming it as a matrix;
+the two-step application above is needed, and implied whenever we
+write $S^+$ in what follows.
+We apply right-preconditioning by $S^+$, as in \cite{acper}.
+\footnote{This idea was suggested to us by Arvind K. Saibaba in 2014.}
+Let the new unknowns (which represent surface values)
+be given by the vectors $\bga\ok = S \bal\ok$,
+for $k=1,\dots,K$.
+Noting that $S S^+ = I$, in the case where $M\ge N$ and $S$ has
+numerical rank $N$, then
+\eqref{2sys} becomes
+\be
+\mt{I}{S^{(12)}S^+}{S^{(21)}S^+}{I} \vt{\bga^{(1)}}{\bga^{(2)}} = \vt{\f^{(1)}}{\f^{(2)}}.
+\label{2sysprec}
+\ee
+One solves this iteratively for the stacked surface value vector
+$\bga := \{\bga\ok\}_{k=1}^K$,
+then recovers $\bal\ok = S^+ \bga\ok$ for each $k$.
+For large-scale problems ($KM \gg 10^4$) in the iterative solve the
+square mat-vec is applied in four stages:
+\ben
+\item apply $S^+$ to each block of the vector to get strengths at the proxy points,
+\item use the $KN$ source to $KM$ target FMM to apply the bare
+MFS system matrix appearing in \eqref{2sys},
+\item in each block subtract $S$ times the block from the answer
+  to kill the diagonal blocks, then
+\item
+  add the original vector to
+account for the identity in \eqref{2sysprec}.
+\een
+
+In the attached Julia codes, one may test the above using
+{\tt multi3delast.jl} with {\tt elast = false}.
+No FMM acceleration is included yet.
+
+
+\section{Elastance formulation and its one-body preconditioning}
+
+Let $\mbf{1}$ denote the vector with all entries 1.
+Let $L = \frac{1}{N}\mbf{1}\mbf{1}^T$ be the $N\times N$ matrix
+with all entries equal to $1/N$; it is the orthogonal projector
+onto the constant vectors in $\R^N$,
+while $I-L$ is the orthogonal projector onto the complement space.
+
+Let 
+
+
+
+\bibliographystyle{abbrv}
+\bibliography{refs}
+
+\end{document}

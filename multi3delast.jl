@@ -18,11 +18,10 @@ using Random                 # so can set seed
 verb = 1                     # verbosity (0=no figs, 1=figs)
 elast = false                 # false: solve Dir BVP. true: elastance BVP
 roundtripchk = false         # false: use sphvals. true: load data (needs file)
-Na = 1000                    # conv param (upper limit for N)
 Mratio = 1.2                 # approx M/N for MFS colloc/proxy
 Rp = 0.7                    # proxy radius
-K = 2                       # num spheres (keep small since (MK)^2 cost)
-deltamin = 0.1               # min sphere separation; let's achieve it
+K = 10                       # num spheres (keep small since (MK)^2 cost)
+deltamin = 0.5               # min sphere separation; let's achieve it
 sphvals = range(0.0,K-1)     # test data for v_k (Dir, fixed for C12 chk) or q_k (elast)
 
 # setup and solve 1 sphere...
@@ -64,7 +63,7 @@ while k <= K
     end                             # else try again...
 end
 
-# set up all proxy, all colloc, and surf test nodes...
+# set up all KN proxy, all KM colloc, and (>KM) surf test nodes...
 XX = zeros(K*M,3)    # all surf (colloc) nodes
 YY = zeros(K*N,3)    # all source (proxy) nodes
 Xt,_ = get_sphdesign(2*M); Mt = size(Xt,1); XXt = zeros(K*Mt,3)  # test nodes
@@ -79,7 +78,7 @@ if verb>0
     display(fig)
 end
 
-AAoffdiag = lap3dchgpotmat(XX, YY)   # fill (!) full system mat Sij
+@time AAoffdiag = lap3dchgpotmat(XX, YY)   # fill (!) full system mat Sij
 # *** to do: make an applier without fill, or FMM wrapper.
 for k=1:K      # kill each diag block
     AAoffdiag[M*(k-1).+(1:M),N*(k-1).+(1:N)] .= 0.0
@@ -126,7 +125,8 @@ else        # elastance BVP. Use "completion" potential...
 end
 matvecop = LinearMap(g -> matvec(g), M*K)  # hmm, has to be easier way :(
 g,stats = gmres(matvecop, rhs; restart=false, rtol=1e-7, history=true, verbose=0)
-@printf "GMRES done: niter=%d, relres=%.3g, in %.3g sec\n" stats.niter stats.residuals[end]/norm(rhs) stats.timer
+@printf("GMRES done: niter=%d, relres=%.3g, gmax=%.3g, in %.3g sec\n", stats.niter,
+    stats.residuals[end]/norm(rhs), norm(g,Inf), stats.timer)
 # check soln err by getting co, then direct eval @ test pts...
 co = blkprecond(g)
 if !elast          # Dir BVP
@@ -160,7 +160,8 @@ end
 
 if K==2 && !elast && !roundtripchk  # chk analytic capacitance (Lebedev et al '65 as in Cheng'01)
     beta = acosh(1+deltamin/2)    # acosh(l), since we built delta=deltamin
-    C12 = sinh(beta) * sum([exp(-(2n+1)beta)/sinh((2n+1)beta) for n=0:20])
+    # number of terms n here grows like delta^{-1/2}. 100 enough for 1e-2:
+    C12 = sinh(beta) * sum([exp(-(2n+1)beta)/sinh((2n+1)beta) for n=0:100])
     @printf "C12_anal=%.8g: our q_1 rel err %.8g\n" C12 C12+chgs[1]/4pi
     # note C12 is *not* chgs[1] when antisymm voltage vs=[-1 1]. Need [0 1].
 end
