@@ -162,7 +162,7 @@ $\vv = C^{-1} \qq$ where $C^{-1}$ is the elastance matrix.
 A useful numerical test is to start with a known $\vv$ vector,
 solve the capacitance problem to get $\qq$, then solve the elastance
 problem with this as input to get an output vector $\vv'$,
-finally reporting the maximum norm of $\vv'-\vv$.
+finally reporting $\|\vv'-\vv\|_\infty/\|\vv\|_\infty$ as an error metric.
 \end{rmk}
 
 \begin{rmk}
@@ -172,12 +172,12 @@ finally reporting the maximum norm of $\vv'-\vv$.
   Furthermore, in $\R^2$ there are deficiencies in the charge
   MFS representations on proxy surfaces with unit logarithmic capacity
   \cite{qfs} that require rank-1 corrections that would interact with the
-  rank-1 corrections below. For this reason we stick to $R^3$.
+  rank-1 corrections below. For this reason we stick to $\R^3$.
   \end{rmk}
 
 \begin{rmk}
-  The Stokes analog of capacitance is the resistance problem,
-  and the analog of elastance is mobility. See \cite{mobility}.
+  The Stokes analog of capacitance is the resistance problem for rigid bodies,
+  and the analog of elastance is mobility for rigid bodies. See \cite{mobility}.
   \end{rmk}
 
 \section{MFS for the Dirichlet BVP}
@@ -223,7 +223,7 @@ S \bal = \f
 \label{1sys}
 \ee
 where $\f:=\{f(\x_i)\}_{i=1}^M$ is the data at collocation points
-and $\bal:=\{\alpha_j\}_{j=1}^N$ are the proxy strengths.
+and $\bal:=\{\alpha_j\}_{j=1}^N$ are the proxy strengths (coefficients).
 For $K=2$ we have
 \be
 \mt{S^{(11)}}{S^{(12)}}{S^{(21)}}{S^{(22)}} \vt{\bal^{(1)}}{\bal^{(2)}} = \vt{\f^{(1)}}{\f^{(2)}}.
@@ -240,6 +240,7 @@ $\bal:=\{\bal\ok\}_{k=1}^K$, the representation for the
 solution is
 \be
 u(\x) = \sum_{k=1}^K \sum_{j=1}^N \alpha\ok_j \Phi(\x,\y\ok_j),
+\qquad \x\in\E,
 \label{rep}
 \ee
 which we abbreviate by $u = {\cal S}\bal$ by analogy with layer potentials.
@@ -310,13 +311,36 @@ No FMM acceleration is included yet.
 
 \section{Elastance formulation and its one-body preconditioning}
 
+A naive approach to elastance would augment the MFS system
+with extra unknowns (the $v_k$) and extra conditions
+(the conditions \eqref{qkgauss} on the coefficients).
+
+*** 
+
+
+  We cannot see how to turn this into a square system that
+  may be preconditioned and solved iteratively using the FMM.
+  Instead we propose an MFS elastance formulation
+  inspired by ``completion flows'' in the Stokes mobility
+  literature, where the double-layer is unable to apply a net force
+  or torque so must be augmented by other types of source.
+  In our case the completion sources can be the proxy points
+  themselves.
+  
 Let $\mbf{1}$ denote the vector with all entries 1.
 Let $L = \frac{1}{N}\mbf{1}\mbf{1}^T$ be the $N\times N$ matrix
 with all entries equal to $1/N$; it is the orthogonal projector
 onto the constant vectors in $\R^N$,
 while $I-L$ is the orthogonal projector onto the complement space.
+We also need the rectangular $M\times N$ matrix
+$L_r$ with all entries $1/N$.
 
-Let 
+Let $\bal_0\ok = \frac{q_k}{N}\mbf{1}$ be the blocks of a source
+vector which defines the
+``completion potential'' ${\cal S}\bal_0$.
+This imparts the correct
+
+***
 
 
 
