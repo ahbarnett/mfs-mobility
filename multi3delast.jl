@@ -18,10 +18,10 @@ using Random                 # so can set seed
 verb = 1                     # verbosity (0=no figs, 1=figs)
 elast = false                 # false: solve Dir BVP. true: elastance BVP
 roundtripchk = false         # false: use sphvals. true: load data (needs file)
+Na = 1000                    # conv param (upper limit for N)
 Mratio = 1.2                 # approx M/N for MFS colloc/proxy
 Rp = 0.7                    # proxy radius
-K = 10                       # num spheres (keep small since (MK)^2 cost)
-deltamin = 0.5               # min sphere separation; let's achieve it
+K = 20                       # num spheres (keep small since (MK)^2 cost)
 sphvals = range(0.0,K-1)     # test data for v_k (Dir, fixed for C12 chk) or q_k (elast)
 
 # setup and solve 1 sphere...

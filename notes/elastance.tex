@@ -51,7 +51,7 @@
 \newcommand{\RR}{\mathbb{R}^2}
 \newcommand{\ve}[4]{\left[\begin{array}{r}#1\\#2\\#3\\#4\end{array}\right]}  % 4-col-vec
 \newcommand{\vt}[2]{\left[\begin{array}{r}#1\\#2\end{array}\right]} % 2-col-vec
-\newcommand{\mt}[4]{\left[\begin{array}{rr}#1&#2\\#3&#4\end{array}\right]} % 2x2, rowwise ordering
+\newcommand{\mt}[4]{\left[\begin{array}{ll}#1&#2\\#3&#4\end{array}\right]} % 2x2, rowwise ordering
 \newcommand{\bigO}{{\mathcal O}}
 \newcommand{\qqquad}{\qquad\qquad}
 \newcommand{\qqqquad}{\qqquad\qqquad}
@@ -66,6 +66,7 @@
 \newtheorem{pro}[thm]{Proposition}
 \newtheorem{rmk}[thm]{Remark}
 \newtheorem{dfn}[thm]{Definition}
+\newtheorem{cno}[thm]{Code node}
 % this work...
 \newcommand{\x}{\mathbf{x}}
 \newcommand{\y}{\mathbf{y}}
@@ -81,7 +82,7 @@
 \newcommand{\pO}{\partial\Omega}
 \newcommand{\ok}{^{(k)}}
 \newcommand{\okp}{^{(k')}}
-
+\newcommand{\SR}{{\cal S}}           % MFS (aka SLP) rep
 
 \begin{document}
 \title{Method of fundamental solutions for large-scale 3D elastance problems}
@@ -243,7 +244,7 @@ u(\x) = \sum_{k=1}^K \sum_{j=1}^N \alpha\ok_j \Phi(\x,\y\ok_j),
 \qquad \x\in\E,
 \label{rep}
 \ee
-which we abbreviate by $u = {\cal S}\bal$ by analogy with layer potentials.
+which we abbreviate by $u = \SR\bal$ by analogy with layer potentials.
 
 The net charges $q_k$ may be extracted either by evaluation of
 \eqref{qk} (which requires an accurate quadrature weights
@@ -255,10 +256,15 @@ q_k = \sum_{j=1}^N \alpha\ok_j, \qquad k=1,\dots,K,
 \ee
 which follows by Gauss' law for $\Phi$.
 
+The above method is not very practical, since it requires a
+dense direct least-squares solution.
 
-\section{One-body preconditioning for larger-scale problems}
 
-The full system \eqref{2sys} is large, dense, and ill-conditioned,
+\section{One-body preconditioning for larger-scale Dirichlet problems}
+\label{s:dirprec}
+
+The full least-squares
+system \eqref{2sys} is large, dense, and ill-conditioned,
 thus not amenable to iterative solution.
 Here we recall how to precondition it to allow an accelerated iterative
 solution.
@@ -304,44 +310,213 @@ MFS system matrix appearing in \eqref{2sys},
 account for the identity in \eqref{2sysprec}.
 \een
 
-In the attached Julia codes, one may test the above using
-{\tt multi3delast.jl} with {\tt elast = false}.
+\begin{cno}
+In the attached Julia codes, one may test the above for spheres using
+{\tt multi3delast.jl} with {\tt elast=false}.
 No FMM acceleration is included yet.
+\end{cno}
 
 
-\section{Elastance formulation and its one-body preconditioning}
+\section{Elastance formulation}
 
-A naive approach to elastance would augment the MFS system
-with extra unknowns (the $v_k$) and extra conditions
-(the conditions \eqref{qkgauss} on the coefficients).
+% intuitive
+We propose an MFS elastance formulation
+inspired by ``completion'' or ``compound'' flows in the Stokes literature
+(Power--Miranda, Pozrikidis, etc, following Mikhlin).
+Recall that in that setting the double-layer is unable to apply a net force
+or torque, so must be augmented by other types of source.
+In constrast, for us the proxy charges {\em can} apply net charge,
+so we emulate a zero-net-charge source by projection and use
+the proxy points themselves as the completion sources.
 
-*** 
-
-
-  We cannot see how to turn this into a square system that
-  may be preconditioned and solved iteratively using the FMM.
-  Instead we propose an MFS elastance formulation
-  inspired by ``completion flows'' in the Stokes mobility
-  literature, where the double-layer is unable to apply a net force
-  or torque so must be augmented by other types of source.
-  In our case the completion sources can be the proxy points
-  themselves.
-  
-Let $\mbf{1}$ denote the vector with all entries 1.
+% notation
+We use the notation $\mbf{1}$, sometimes with a subscript to denote the dimension, for the vector with all entries $1$.
 Let $L = \frac{1}{N}\mbf{1}\mbf{1}^T$ be the $N\times N$ matrix
-with all entries equal to $1/N$; it is the orthogonal projector
+with all entries $1/N$; it is the orthogonal projector
 onto the constant vectors in $\R^N$,
 while $I-L$ is the orthogonal projector onto the complement space.
 We also need the rectangular $M\times N$ matrix
 $L_r$ with all entries $1/N$.
 
-Let $\bal_0\ok = \frac{q_k}{N}\mbf{1}$ be the blocks of a source
-vector which defines the
-``completion potential'' ${\cal S}\bal_0$.
-This imparts the correct
+% define al_0
+Recalling the representation notation $\SR$ from above,
+we set up a ``completion potential'' $\SR\bal_0$
+where $\bal_0\in\R^{KN}$ is a strength vector,
+which imparts the desired net charge $q_k$ to the $k$th body.
+A simple choice of $\bal_0$ is each block constant,
+\be
+\bal_0\ok = \frac{q_k}{N}\mbf{1}_N, \qquad k=1,\dots,K.
+\label{al0}
+\ee
 
-***
+% one body
+We explain first the case $K=1$ for simplicity.
+Given an unknown vector $\bal\in\R^{N}$,
+our proposed representation is
+\be
+u = \SR (I-L)\bal + \SR\bal_0 \qqqquad \mbox{($K=1$ case)},
+\label{erep1}
+\ee
+where we have projected out the nonzero mean part of $\bal$ so that the
+first term cannot change the net body charge, by analogy
+with a double-layer potential.
+Inserting \eqref{erep1} into the boundary condition \eqref{vk}
+(being $u|_{\pO_1} = v_1$) at collocation nodes gives
+\be
+S(I-L)\bal + S\bal_0 = \mbf{V}
+\label{esys1}
+\ee
+where $S$ is the MFS matrix, and $\mbf{V} = v_1\mbf{1}_M$ the constant
+vector with unknown constant (the notation $\mbf{V}$ echoes
+that for a rigid body motion in the Stokes literature).
+The system is closed by choosing a representation for $V$ in terms of
+$\bal$. The subspace Span$\{\mbf{1}_N\}$ is available for this, it
+having no effect on the first term $S(I-L)\bal$.
+Hence we make an ansatz
+\[
+\mbf{V} = -L_r \bal,
+\]
+analogous to the Stokes mobility case
+(see, eg, \cite[Sec.~4.2]{csbq}),
+and substituting this into \eqref{esys1} gives the linear system
+\[
+\bigl[ S(I-L) + L_r \bigr] \bal = -S\bal_0.
+\]
+It is easy to check that if $\bal$ solves this system, then
+the boundary condition is satisfied at collocation nodes
+for some constant $v_1 = -\frac{1}{N}\mbf{1}^T\bal$.
+The net charge is $q_1$ by construction, and the representation \eqref{erep1}
+satisfies the PDE, so that it is the unique solution to the elastance
+problem.
 
+% general
+We now present the case for a general number of bodies $K\ge 1$.
+The representation is
+\be
+u = \sum_{k=1}^K \SR\ok \bigl[ (I-L)\bal\ok + \bal_0\ok \bigr],
+\label{erepK}
+\ee
+where $\SR\ok$ is the MFS charge representation from body $k$;
+more precisely
+$(\SR\ok \bm{\beta})(\x) := \sum_{j=1}^N \beta_j \Phi(\x,\y\ok_j)$
+for any vector $\bm{\beta}:=\{\beta_j\}_{j=1}^N$.
+The algorithm is summarized by the main result.
+\begin{pro} Let $\bal\in\R^{KN}$ solve the linear system with block rows
+  \be
+     [S(I-L) + L_r] \bal\ok + \sum_{k'\neq k} S^{(kk')}(I-L)\bal\okp = -\mbf{u}\ok_0
+     ,\qquad k=1,\dots,K,
+  \label{esysK}
+  \ee
+  where, recalling $\bal_0$ defined by \eqref{al0}, the right-hand side vector has block entries
+  \be
+  \mbf{u}\ok_0 = \sum_{k'=1}^K S^{(kk')} \bal\okp_0, \qquad k=1,\dots,K.
+  \label{erhsK}
+  \ee
+  Then the potential $u$ given by the representation \eqref{erepK} is the unique solution
+  to the discretized elastance BVP, meaning that
+  it is harmonic in $\E$, constant
+  on the collocation nodes for each body, and has the
+  desired net charges \eqref{qkgauss}.
+  The constant voltages may be read off as the negative mean strengths
+  \be
+  v_k = -\frac{1}{N}\sum_{j=1}^N \alpha\ok_j, \qquad k=1,\dots,K.
+  \label{vkal}
+  \ee
+\end{pro}
+%block-constant vector $V = [v_1 \mbf{1}_M; \dots ; v_K \mbf{1}_M]$ encodes the unknown voltages $v_k$.
+\begin{proof}
+  Replacing $k$ by $k'$ in the representation \eqref{erepK},
+  then evaluating it on the collocation nodes of the $k$th body,
+  gives the vector of potentials
+  \[
+  \{u(\x\ok_i)\}_{i=1}^M =
+  \sum_{k'=1}^K S^{(kk')}\bigl[  (I-L)\bal\okp + \bal\okp_0 \bigr].
+  \]
+  Subtracting \eqref{esysK} leaves $\{u(\x\ok_i)\}_{i=1}^M = -L_r \bal\ok$,
+  which shows that the potential is constant on the $k$th body,
+  and that constant is \eqref{vkal}.
+  $u$ is harmonic since it is a sum of fundamentation solutions,
+  and has the correct charges by construction from \eqref{al0}.
+\end{proof}
+
+The least squares linear system \eqref{esysK} is not very practical
+since it requires a dense direct solution, taking $\bigO(K^3N^3)$ effort.
+We improve this in the next subsection.
+
+
+\begin{rmk}[Alternative approach to elastance]\label{r:saddle}
+A naive approach to elastance might augment the MFS system
+with extra unknowns (the $v_k$) and extra conditions
+(the conditions \eqref{qkgauss} on the coefficients).
+For $K=1$ bodies this leads to a saddle-point type
+rectangular linear system
+with block structure
+$$
+\mt{S}{-\mbf{1}_M}{\mbf{1}_N^T}{0} \vt{\bal}{v_1} = \vt{\mbf{0}}{q_1}.
+$$
+By elimination of $\bal$ the solution is $v_1 = q_1 / (\mbf{1}^T S^+ \mbf{1})$,
+where we inverted the $1\times 1$ capacitance matrix $\mbf{1}^T S^+ \mbf{1}$.
+The generalization to $K>1$ appears to need $K$ solves:
+it basically involves filling (via Dirichlet BVP solves), then inverting, the $K\times K$ capacitance matrix, at a cost $\bigO(NK^2 + K^3)$.
+We cannot see how to turn the augmented elastance system into a square system that
+may be preconditioned and solved (once) iteratively using the FMM
+at cost $\bigO(NK)$.
+``Ones-matrix'' tricks of adding a rank-one to $S$ are unclear
+because $S$ is usually numerically full rank.
+\end{rmk}
+
+
+\section{One-body preconditioning for elastance}
+
+The elastance MFS linear system may be right-preconditioned by factorizing
+the diagonal blocks, identically to the Dirichlet BVP case.
+Letting $S_L := S(I-L) + L_r \in \R^{M\times N}$,
+then in the $K=2$ case the result is
+\be
+\mt{I}{S^{(12)}(I-L)S_L^+}{S^{(21)}(I-L)S_L^+}{I} \vt{\bga^{(1)}}{\bga^{(2)}} = \vt{\mbf{u}^{(1)}}{\mbf{u}^{(2)}},
+\label{2esysprec}
+\ee
+recalling the right-hand side definition \eqref{erhsK}.
+The generalization to $K>2$ is obvious.
+One first precomputes the two matrices that apply the pseudoinverse
+$S^+_L$, using its SVD.
+Then, one solves \eqref{2esysprec}
+iteratively using GMRES for the stacked surface
+value vector
+$\bga := \{\bga\ok\}_{k=1}^K$.
+An accelerated mat-vec would proceed as in Sec.~\ref{s:dirprec} except
+with the application of $I-L$ to each vector block after Step 1.
+One then recovers $\bal\ok = S^+ \bga\ok$ for each $k$,
+finally reporting their averages $v_k$ via \eqref{vkal}.
+
+\begin{cno}
+  In the attached Julia codes, one may test the above for spheres using
+{\tt multi3delast.jl} with {\tt elast=true}.
+No FMM acceleration is yet included. Even filling a dense matrix
+for the mat-vec, $KN$ up to about $20000$ are
+possible in a few seconds on an 8-core CPU. See Fig.~\ref{f:elast}.
+  \end{cno}
+
+\bfi
+\centering \ig{width=5in}{un_K20_d0.1.png}
+\ca{Elastance calculation with $K=20$ unit spheres with minimum separation
+  $\delta=0.1$, $N=969$ unknowns per sphere, 5 digits of accuracy in the maximum relative boundary condition error. Shown is $u_n$ (charge density)
+  at $2KM= 44920$ test points. Solution time about 20 seconds.}{f:elast}
+\efi
+
+
+\section{Open questions}
+
+\ben
+\item The Stokes versions.
+\item Remind reader of uniqueness and existence for elastance (Rachh).
+\item Rigorous proof at continuous level of existence of MFS solution assuming
+  continuation inside as a PDE solution. Same for elastance formulation---%
+  how do we know the loss of constant functions doesn't cause any resonances
+  or problems?
+\item Is Rmk.~\ref{r:saddle} correct? Search for connection
+  of augmented to completion systems.
+\een
 
 
 \bibliographystyle{abbrv}
