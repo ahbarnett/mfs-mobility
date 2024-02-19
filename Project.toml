@@ -1,0 +1,8 @@
+[deps]
+CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
+GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
+Krylov = "ba0b0d4f-ebba-5204-a429-3ac8c609bfb7"
+Lebedev = "c5712dd9-2571-4e23-b661-b4a261421493"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+LinearMaps = "7a12625a-238d-50fd-b39a-03d52299707e"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
