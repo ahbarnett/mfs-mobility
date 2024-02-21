@@ -1,7 +1,7 @@
 # test 3D multi-sphere (monodisperse) Dir BVP via 1-body MFS precond
 # Results:
-#   uinc(x)=x_3, N=700 easy gets 1e-6 for K=10 d=0.1.
-#   uinc(x)=k (sph #), N=1000 gets 1e-4 for K=10 d=0.1.
+#   uinc(x)=x_3, N=700 easy gets 1e-6 relres for K=10 d=0.1.
+#   uinc(x)=k (sph #), N=1200 gets 1e-5 relres for K=10 d=0.1.
 # Barnett 11/08/23
 
 include("MFS3D.jl")

@@ -15,8 +15,8 @@ t,tw,tn = unitcircle(M)   # colloc (targ) pts: log_cap=1 -> careful
 s,_,_ = unitcircle(N)    # source pts
 s *= 0.7
 
-@printf "1-body exterior Dirichlet BVP with specified net charge Sig...\n"
-# this serves to test MFS2D module
+@printf "1-body exterior 2D Dirichlet BVP with specified net charge Sig...\n"
+# this tests MFS2D module, and the augmented 1-body MFS system...
 A=lap2dchgpotmat(t,s)
 A = [A; ones(1,N)]    # extra condition on net charge
 A = [A [ones(M,); 0.0] ]   # append overall const as a dof (can't tie it to net chg)
@@ -29,10 +29,10 @@ co = A\rhs
 r=norm(A*co-rhs)/norm(rhs)
 ut,gradut = lap2dchgeval(t,s,co[1:N])    # mfs eval on surf
 ut .+= co[end]    # add in const term
-re = norm(ut+uinc)/norm(uinc)              # rel surf error 
+re = norm(ut+uinc)/norm(uinc)              # rel surf error
 @printf "solved\trelresid=%.3g, bdryrelerr=%.3g, norm(c)=%.3g\n" r re norm(co)
 fluxt = dot(tw,sum(gradut.*tn,dims=2))     # surf integral u_n (uinc_n flux=0)
-@printf "\ttot charge err=%.3g (via co), %.3g (u_n)\n" sum(co[1:N])-Sig fluxt-Sig
+@printf "\ttot charge err=%.3g (via co), %.3g (u_n)\n" sum(co[1:N])-Sig -fluxt-Sig
 if verb>0       # plot soln and geom
     ng=300; g = range(-2,2,ng); o=ones(size(g)); gg=[kron(o,g) kron(g,o)]
     ugg,_ = lap2dchgeval(gg,s,co[1:N]); ugg .+= co[end]   # u_scatt on grid

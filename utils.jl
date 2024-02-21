@@ -44,7 +44,7 @@ returns available list of numbers of spherical design points.
 `Ns[t]` is the number of points in the spherical design exact for
 degree `t`, for t=1,...,180.
 
-Also see: sphdesign_by_points
+Also see: [`get_sphdesign`](@ref)
 """
 function getavailablesphdesigns()
     # file list with leading "sf" chars removed (dot is separator)...
