@@ -3,7 +3,7 @@
 # Try L (1s-matrix, ie, orthog projector) and Lr perturbs.
 # Incorporates multi3ddir.jl (via elast=false).
 # Has roundtripchk: loads ans from other BVP & chks recovers known
-# Barnett 11/09/23
+# Barnett 11/09/23. Use for journal fig plots 2/20/23
 
 include("MFS3D.jl")
 using .MFS3D
@@ -11,17 +11,19 @@ include("utils.jl")
 using LinearAlgebra       # dense stuff
 using Krylov
 using LinearMaps             # needed by Krylov
-using GLMakie
+using GLMakie                # CairoMakie fails to z-buffer 3d scatter correctly
+include("parula.jl")
 using Printf
 using Random                 # so can set seed
 
-verb = 1                     # verbosity (0=no figs, 1=figs)
-elast = false                 # false: solve Dir BVP. true: elastance BVP
+verb = 1                     # verbosity (0=no figs, 1=figs, ...)
+elast = true                 # false: solve Dir BVP. true: elastance BVP
 roundtripchk = false         # false: use sphvals. true: load data (needs file)
 Na = 1000                    # conv param (upper limit for N)
 Mratio = 1.2                 # approx M/N for MFS colloc/proxy
-Rp = 0.7                    # proxy radius
-K = 20                       # num spheres (keep small since (MK)^2 cost)
+Rp = 0.7                    # proxy radius (eg 0.8 for d=1e-2, Na=4k)
+K = 10                       # num spheres (keep small since (MK)^2 cost)
+deltamin = 0.1               # min sphere separation; let's achieve it
 sphvals = range(0.0,K-1)     # test data for v_k (Dir, fixed for C12 chk) or q_k (elast)
 
 # setup and solve 1 sphere...
@@ -36,7 +38,7 @@ if elast @printf "elastance case: perturbing S to S(I-L)+Lr ...\n"
     Lr = fill(1.0/N, (M,N))     # rect 1s mat
     A = A*(I-L) + Lr            # perturb; unkn const V = -Lr.co
 end
-F = svd(A)
+@time F = svd(A)
 Z = F.Vt' * Diagonal(1 ./ F.S)   # so pseudoinv apply A^+ b = Z*(F.U'*b)
 println("sphere: N=$N, M=$M, sing vals in ", extrema(F.S), " cond(A)=", F.S[1] / F.S[end])
 b = X[:,2]              # a smooth test vec on surf
@@ -72,7 +74,7 @@ for k=1:K            # copy in displaced sphere nodes
     XXt[Mt*(k-1).+(1:Mt),:] = Xc[[k],:] .+ Xt
     YY[N*(k-1).+(1:N),:] = Xc[[k],:] .+ Y
 end
-if verb>0
+if verb>1
     fig,ax,l = scatter(XX[:,1],XX[:,2],XX[:,3],color=1:K*M,markersize=3)
     zoom!(ax.scene,0.5); Label(fig[1,1,Top()], "colloc pts colored by index")
     display(fig)
@@ -136,7 +138,8 @@ if !elast          # Dir BVP
     else writedlm("data/multi3d_chgs.dat", chgs)   # in pkg via utils
     end
     uinct = uinc.(eachrow(XXt))      # u_inc @ test pts
-    @time bcerr = uinct .+ lap3dchgeval(XXt,YY,co)[1]  # the rep
+    @time ut, gut = lap3dchgeval(XXt,YY,co)
+    bcerr = uinct .+ ut              # the rep
     @printf "Dir rel max err at %d surf test pts: %.3g\n" K*Mt norm(bcerr,Inf)/norm(uinct,Inf)
 else               # elastance: eval the rep ut & chk voltages
     vs = [-mean(co[(k-1)*N.+(1:N)]) for k=1:K]    # voltages out 
@@ -145,17 +148,42 @@ else               # elastance: eval the rep ut & chk voltages
 
     else writedlm("data/multi3d_pots.dat", vs)
     end
-    @time ut = lap3dchgeval(XXt,YY,blkorthogL(co) .+ co0)[1]  # the rep
+    @time ut, gut = lap3dchgeval(XXt,YY,blkorthogL(co) .+ co0)  # the rep
     bcerr = ut .- kron(vs,ones(Mt))    # compare surf voltages
     @printf "Elast rel max err at %d surf test pts: %.3g\n" K*Mt norm(bcerr,Inf)/norm(vs,Inf)
 end
 if verb>0
     GLMakie.activate!(title="multi3d: BC residuals @ test pts")
-    fig2,ax2,l2 = scatter(XXt[:,1],XXt[:,2],XXt[:,3],color=bcerr,markersize=5)
-    l2.colorrange = norm(bcerr,Inf)*[-1,1]     # symmetric colors
-    l2.colormap=:jet; Colorbar(fig2[1,2],l2)
-    zoom!(ax2.scene,0.5)
+    fig2 = Figure(fontsize=20,size=(700,500))
+    a2 = LScene(fig2[1,1])
+#    fig2,a2,l2 = scatter(XXt[:,1],XXt[:,2],XXt[:,3],color=bcerr,markersize=5)
+#    l2.colorrange = norm(bcerr,Inf)*[-1,1]     # symmetric colors, linear colorscale
+#    l2.colormap=:jet;
+    l2 = scatter!(a2,XXt[:,1],XXt[:,2
+    ],XXt[:,3],color=abs.(bcerr),colorscale=log10,markersize=5)
+    l2.colorrange = norm(bcerr,Inf)*[1e-3,1]     # log (top 3 digits of resid err)
+    l2.colormap=parula  #  from parula.jl    #Reverse(:viridis);  # cute
+    Colorbar(fig2[1,2],l2)
+    #cam = cameracontrols(lsc2.scene)
+    #cam.eyeposition[] = [2.0,0,0]; cam.fov[]=20    # doesn't change stuff!
     display(GLMakie.Screen(), fig2)
+    zoom!(a2.scene,0.5)    # has no effect :(   ... is undone at the save stage!
+    update_cam!(a2.scene, cameracontrols(a2.scene))
+    # had to view from below to get scatter point 3d z-buffer to look ok :(
+    update_cam!(a2.scene, 0, -0.4)    # view angle (phi, theta) in radius
+    save("pics/resid_P10_d0.1_N1000.png",fig2)
+
+    GLMakie.activate!(title="multi3d: u_n (charge dens) @ test pts")
+    fig3 = Figure(fontsize=20,size=(700,500))
+    a3 = LScene(fig3[1,1])
+    unt = sum(gut.*kron(ones(K),Xt), dims=2)    # grad u dot n @ test pts
+    l3 = scatter!(a3,XXt[:,1],XXt[:,2],XXt[:,3],color=unt[:],markersize=5)
+    l3.colorrange = norm(unt,Inf)*[-1,1]      # symmetric colors
+    l3.colormap=:jet; Colorbar(fig3[1,2],l3)
+    display(GLMakie.Screen(), fig3)
+    zoom!(a3.scene,0.5)
+    update_cam!(a3.scene, 0, -0.4)
+    save("pics/un_P10_d0.1_N1000.png",fig3)
 end
 
 if K==2 && !elast && !roundtripchk  # chk analytic capacitance (Lebedev et al '65 as in Cheng'01)

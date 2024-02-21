@@ -1,5 +1,7 @@
 [deps]
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
+ColorSchemes = "35d6a980-a343-548e-a6ea-1d62b119f2f4"
+ColorTypes = "3da002f7-5984-5a60-b8a6-cbb66c0b333f"
 GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
 Krylov = "ba0b0d4f-ebba-5204-a429-3ac8c609bfb7"
 Lebedev = "c5712dd9-2571-4e23-b661-b4a261421493"
