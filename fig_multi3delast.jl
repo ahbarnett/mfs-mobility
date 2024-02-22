@@ -11,6 +11,7 @@ using Krylov
 using LinearMaps             # needed by Krylov
 using CairoMakie
 using Printf
+using DelimitedFiles
 
 verb = 1                     # verbosity (0=no figs, 1=figs, ...)
 elast = true                 # false: solve Dir BVP. true: elastance BVP
@@ -45,8 +46,8 @@ while k <= K
 end
 
 errs = collect(0.0*Nas)         # LNT style allocate
-Ns = similar(Nas); iters = similar(Nas)
-for (i,Na) in enumerate(Nas)    # ..............................................
+Ns = similar(Nas); iters = similar(Nas); vss = zeros(Float64,length(Nas),K)
+for (i,Na) in enumerate(Nas)    # .............................................
 
 # setup and solve 1 sphere...
 Y,_ = get_sphdesign(Na)
@@ -142,7 +143,8 @@ if !elast          # Dir BVP
     errs[i] = norm(bcerr,Inf)/norm(uinct,Inf)
     @printf "Dir rel max err at %d surf test pts: %.3g\n" K*Mt errs[i]
 else               # elastance: eval the rep ut & chk voltages
-    vs = [-mean(co[(k-1)*N.+(1:N)]) for k=1:K]    # voltages out 
+    vs = [-mean(co[(k-1)*N.+(1:N)]) for k=1:K]    # voltages out
+    vss[i,:] = vs              # save them 
     @time ut, gut = lap3dchgeval(XXt,YY,blkorthogL(co) .+ co0)  # the rep
     bcerr = ut .- kron(vs,ones(Mt))    # compare surf voltages
     errs[i] = norm(bcerr,Inf)/norm(vs,Inf)
@@ -150,19 +152,34 @@ else               # elastance: eval the rep ut & chk voltages
 end
 end                # .................................................
 
-using DelimitedFiles
-#writedlm("data/P10.d0.1.R0.7.dat", [Ns errs iters])
-#data = readdlm("data/P10.d0.1.R0.7.dat")
-#Ns = data[:,1]; errs = data[:,2]; iters=data[:,3]
-# conv plot...
-#Ns = [maximum(Naa[Naa.<Na]) for Na in Nas]        # if needed
+#writedlm("data/P10.d0.1.R0.7.dat", [Ns errs iters vss])
+data = readdlm("data/P10.d0.1.R0.7.dat")
+Ns = data[:,1]; errs = data[:,2]; iters=data[:,3]; vss=data[:,4:end]
+#Ns = [maximum(Naa[Naa.<Na]) for Na in Nas]        # or if needed
+
+Racc = 1+deltamin/2 - sqrt(deltamin+deltamin^2/4)   # img accum pt given delta
+
+if false # max resid conv plot...
 fig=Figure(fontsize=20)
 ax=Axis(fig[1,1],yscale=log10,xscale=sqrt,xlabel=L"N")
 scatterlines!(Ns,errs,markersize=10,label=L"max resid err$$")
-# image accum radius, from our resistance paper...
-Racc = 1+deltamin/2 - sqrt(deltamin+deltamin^2/4)
 lines!(Ns,0.2*Racc.^sqrt.(Ns),color=:green,linestyle=:dash,
     label=L"$O(R_\text{acc}^{\sqrt{N}})$")
 axislegend()
 display(fig)
 save("pics/P10_d0.1_R0.7_resid_conv.pdf",fig)
+end
+
+fig=Figure(fontsize=20)
+ax=Axis(fig[1,1],yscale=log10,xscale=sqrt,xlabel=L"N")
+perrs = maximum(abs.(vss .- vss[end,:]'),dims=2)
+j = 1:(length(Ns)-1)
+scatterlines!(Ns[j],perrs[j],markersize=10,label=L"max $\phi_k$ error")
+lines!(Ns[j],0.2*Racc.^sqrt.(Ns[j]),color=:green,linestyle=:dash,
+    label=L"$O(R_\text{acc}^{\sqrt{N}})$")
+lines!(Ns[j],0.1*Racc.^(2*sqrt.(Ns[j])),color=:red,linestyle=:dot,
+    label=L"$O(R_\text{acc}^{2\sqrt{N}})$")
+axislegend()
+display(fig)
+save("pics/P10_d0.1_R0.7_phi_selfconv.pdf",fig)
+

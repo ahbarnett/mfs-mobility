@@ -159,8 +159,10 @@ if verb>0
 #    fig2,a2,l2 = scatter(XXt[:,1],XXt[:,2],XXt[:,3],color=bcerr,markersize=5)
 #    l2.colorrange = norm(bcerr,Inf)*[-1,1]     # symmetric colors, linear colorscale
 #    l2.colormap=:jet;
-    l2 = scatter!(a2,XXt[:,1],XXt[:,2
-    ],XXt[:,3],color=abs.(bcerr),colorscale=log10,markersize=5)
+    l2 = scatter!(a2,XXt[:,1],XXt[:,2],XXt[:,3],color=abs.(bcerr),colorscale=log10,
+        markersize=7,fxaa=true)
+    # issue of white outline (overdraw=true ruins z-buffer)...
+    #https://discourse.julialang.org/t/hide-stroke-in-3d-scatter-using-makie-jl/106383
     l2.colorrange = norm(bcerr,Inf)*[1e-3,1]     # log (top 3 digits of resid err)
     l2.colormap=parula  #  from parula.jl    #Reverse(:viridis);  # cute
     Colorbar(fig2[1,2],l2)
@@ -168,22 +170,23 @@ if verb>0
     #cam.eyeposition[] = [2.0,0,0]; cam.fov[]=20    # doesn't change stuff!
     display(GLMakie.Screen(), fig2)
     zoom!(a2.scene,0.5)    # has no effect :(   ... is undone at the save stage!
-    update_cam!(a2.scene, cameracontrols(a2.scene))
+    #update_cam!(a2.scene, cameracontrols(a2.scene))
     # had to view from below to get scatter point 3d z-buffer to look ok :(
     update_cam!(a2.scene, 0, -0.4)    # view angle (phi, theta) in radius
-    save("pics/resid_P10_d0.1_N1000.png",fig2)
+    save("pics/resid_P10_d0.1_N1000z.png",fig2; update=false)    # <- crucial!
 
     GLMakie.activate!(title="multi3d: u_n (charge dens) @ test pts")
     fig3 = Figure(fontsize=20,size=(700,500))
     a3 = LScene(fig3[1,1])
     unt = sum(gut.*kron(ones(K),Xt), dims=2)    # grad u dot n @ test pts
-    l3 = scatter!(a3,XXt[:,1],XXt[:,2],XXt[:,3],color=unt[:],markersize=5)
+    l3 = scatter!(a3,XXt[:,1],XXt[:,2],XXt[:,3],color=unt[:],
+        markersize=7,fxaa=true)
     l3.colorrange = norm(unt,Inf)*[-1,1]      # symmetric colors
     l3.colormap=:jet; Colorbar(fig3[1,2],l3)
     display(GLMakie.Screen(), fig3)
     zoom!(a3.scene,0.5)
     update_cam!(a3.scene, 0, -0.4)
-    save("pics/un_P10_d0.1_N1000.png",fig3)
+    save("pics/un_P10_d0.1_N1000z.png",fig3; update=false)       # <- crucial!
 end
 
 if K==2 && !elast && !roundtripchk  # chk analytic capacitance (Lebedev et al '65 as in Cheng'01)
