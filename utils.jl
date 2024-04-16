@@ -176,7 +176,7 @@ vecnorm(A::AbstractArray) = [norm(A[:,j],2) for j in eachcol(A)]  # a la Matlab
 Returns `Xc` a (K,3) array of coordinates in R3 of centers of a cluster of `K` unit
 spheres achieving minimum separation of `delta>0`. Anna Broms K^2 algorithm which
 moves a sphere away from origin along a fixed random direction until is within
-`tol/delta` of the right minumum distance from other spheres, until got enough.
+`tol/delta` of the right minimum distance from other spheres, until got enough.
 
 Reimplements grow_cluster.m by Broms. 4/12/24, Barnett.
 """

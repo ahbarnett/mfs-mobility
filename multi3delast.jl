@@ -154,8 +154,8 @@ if verb>0
     zoom!(a2.scene,0.5)    # has no effect :(   ... is undone at the save stage!
     #update_cam!(a2.scene, cameracontrols(a2.scene))
     # had to view from below to get scatter point 3d z-buffer to look ok :(
-    update_cam!(a2.scene, 0, -0.4)    # view angle (phi, theta) in radius
-    save("pics/resid_P10_d0.1_N1000b.png",fig2; update=false)    # <- crucial!
+    update_cam!(a2.scene, 1.5, -0.5)    # view angle (phi, theta) in radius
+    save("pics/resid_P10b_d0.1_N1000.png",fig2; update=false)    # <- crucial!
 
     GLMakie.activate!(title="multi3d: u_n (charge dens) @ test pts")
     fig3 = Figure(fontsize=20,size=(700,500))
@@ -167,8 +167,8 @@ if verb>0
     l3.colormap=:jet; Colorbar(fig3[1,2],l3)
     display(GLMakie.Screen(), fig3)
     zoom!(a3.scene,0.5)
-    update_cam!(a3.scene, 0, -0.4)
-    save("pics/un_P10_d0.1_N1000b.png",fig3; update=false)       # <- crucial!
+    update_cam!(a3.scene, 1.5, -0.5)
+    save("pics/un_P10b_d0.1_N1000.png",fig3; update=false)       # <- crucial!
 end
 
 if K==2 && !elast && !roundtripchk  # chk analytic capacitance (Lebedev et al '65 as in Cheng'01)

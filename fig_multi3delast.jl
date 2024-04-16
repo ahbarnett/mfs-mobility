@@ -25,7 +25,7 @@ Nas = 200:200:2000                    # conv param (upper limit for N each time)
 # (K=10, Nas=200:200:2000 takes ~2 min to run)
 
 # make cluster of K unit spheres, some pair separations=deltamin (dumb K^2 alg)
-Xc = sphere_cluster_tree(K,deltamin)
+Xc = sphere_cluster_broms(K,deltamin)
 
 errs = collect(0.0*Nas)         # LNT style allocate
 Ns = similar(Nas); iters = similar(Nas); vss = zeros(Float64,length(Nas),K)
@@ -134,14 +134,15 @@ else               # elastance: eval the rep ut & chk voltages
 end
 end                # .................................................
 
-#writedlm("data/P10.d0.1.R0.7.dat", [Ns errs iters vss])
-data = readdlm("data/P10.d0.1.R0.7.dat")
+#  optional load/save to avoid 1 min recomputation time...
+writedlm("data/P10b.d0.1.R0.7.dat", [Ns errs iters vss])
+data = readdlm("data/P10b.d0.1.R0.7.dat")
 Ns = data[:,1]; errs = data[:,2]; iters=data[:,3]; vss=data[:,4:end]
 #Ns = [maximum(Naa[Naa.<Na]) for Na in Nas]        # or if needed
 
 Racc = 1+deltamin/2 - sqrt(deltamin+deltamin^2/4)   # img accum pt given delta
 
-if false # max resid conv plot...
+if true # max resid conv plot...
 fig=Figure(fontsize=20)
 ax=Axis(fig[1,1],yscale=log10,xscale=sqrt,xlabel=L"N")
 scatterlines!(Ns,errs,markersize=10,label=L"max resid err$$")
@@ -149,7 +150,7 @@ lines!(Ns,0.2*Racc.^sqrt.(Ns),color=:green,linestyle=:dash,
     label=L"$O(R_\text{acc}^{\sqrt{N}})$")
 axislegend()
 display(fig)
-save("pics/P10_d0.1_R0.7_resid_conv.pdf",fig)
+save("pics/P10b_d0.1_R0.7_resid_conv.pdf",fig)
 end
 
 fig=Figure(fontsize=20)
@@ -163,5 +164,5 @@ lines!(Ns[j],0.1*Racc.^(2*sqrt.(Ns[j])),color=:red,linestyle=:dot,
     label=L"$O(R_\text{acc}^{2\sqrt{N}})$")
 axislegend()
 display(fig)
-save("pics/P10_d0.1_R0.7_phi_selfconv.pdf",fig)
+save("pics/P10b_d0.1_R0.7_phi_selfconv.pdf",fig)
 
