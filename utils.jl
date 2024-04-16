@@ -135,3 +135,77 @@ function get_fibonacci(N::Integer=1000)
 end
 
 mean(x) = sum(x)/length(x)       # not in base, weirdly
+
+"""
+    Xc = sphere_cluster_tree(K::Integer,delta; seed::Integer=0)
+
+Returns `Xc` a (K,3) array of coordinates in R3 of centers of a cluster of `K` unit
+spheres achieving minimum separation of `delta>0`. Dumb K^2 algorithm which attempts
+to add sphere delta-near to a random sphere in a random direction, rejects if
+intersects, until got enough.
+"""
+function sphere_cluster_tree(K::Integer,delta; seed::Integer=0)
+    @assert delta>0
+    Xc = zeros(K, 3)  # center coords of spheres
+    k = 2             # index of next sphere to create
+    Random.seed!(seed)
+    while k <= K
+        j = rand(1:k-1)     # pick random existing sphere
+        v = randn(3)
+        v *= (2 + delta) / norm(v)      # displacement vec
+        trialc = (Xc[j, :] + v)'        # new center, row vec
+        mindist = Inf
+        if k > 2                     # exist others to check dists...
+            otherXc = Xc[(1:K.!=j) .& (1:K.<k), :]   # exclude sphere j
+            #println("k=$k, j=$j, o=",otherXc, ", tc=", trialc)
+            mindist = sqrt(minimum(sum((trialc .- otherXc).^2, dims=2)))
+        end
+        if mindist >= 2 + deltamin
+            Xc[k,:] = trialc            # keep that sphere
+            k += 1
+        end                             # else try again...
+    end
+    return Xc
+end
+
+vecnorm(A::AbstractArray) = [norm(A[:,j],2) for j in eachcol(A)]  # a la Matlab
+
+"""
+    Xc = sphere_cluster_broms(K::Integer,delta; tol=1e-5, seed::Integer=0, maxit=100)
+
+Returns `Xc` a (K,3) array of coordinates in R3 of centers of a cluster of `K` unit
+spheres achieving minimum separation of `delta>0`. Anna Broms K^2 algorithm which
+moves a sphere away from origin along a fixed random direction until is within
+`tol/delta` of the right minumum distance from other spheres, until got enough.
+
+Reimplements grow_cluster.m by Broms. 4/12/24, Barnett.
+"""
+function sphere_cluster_broms(K::Integer,delta; tol=1e-5, seed::Integer=0,
+                              maxit::Integer=100)
+    @assert delta>0
+    Xc = zeros(K, 3)     # center coords of spheres
+    k = 2                # leave 1st sphere at origin
+    Random.seed!(seed)
+    while k <= K
+        v = randn(3)'     # row vec
+        v /= norm(v)      # unit direction vec (Broms calls n)
+        # Anna's function to rootfind on: desired dist to prior spheres
+        f(s) = sqrt(minimum(sum((s*v .- Xc[1:k-1,:]).^2, dims=2))) - (2+delta)
+        s2 = 2+delta; s1 = s2+0.1     # initial guess of distances along ray
+        iter = 0
+        f1 = f(s1); f2 = f(s2)
+        while abs(f2)/delta > tol && iter<maxit
+            snew = s2 - f2*(s2-s1)/(f2-f1)
+            s1,s2 = s2,snew
+            f1,f2 = f2,f(snew)               # one f eval per iter
+            iter += 1
+        end
+        if iter<maxit
+            Xc[k,:] = s2*v                   # keep that sphere
+            k += 1
+        else
+            println("k=$k: reached maxit, trying new direction")
+        end
+    end
+    return Xc
+end

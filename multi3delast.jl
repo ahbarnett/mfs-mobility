@@ -16,7 +16,7 @@ include("parula.jl")
 using Printf
 using Random                 # so can set seed
 
-verb = 1                     # verbosity (0=no figs, 1=figs, ...)
+verb = 2                     # verbosity (0=no figs, 1=figs, ...)
 elast = true                 # false: solve Dir BVP. true: elastance BVP
 roundtripchk = false         # false: use sphvals. true: load data (needs file)
 Na = 1000                    # conv param (upper limit for N)
@@ -45,25 +45,7 @@ b = X[:,2]              # a smooth test vec on surf
 @printf "\tcheck pinv A works on smooth vec: %.3g\n" norm(A \ b - Z * (F.U' * b)) / norm(b)
 
 # make cluster of K unit spheres, some pair separations=deltamin (dumb K^2 alg)
-Xc = zeros(K, 3)  # center coords of spheres (todo: make func)
-k = 2             # index of next sphere to create
-Random.seed!(0)
-while k <= K
-    j = rand(1:k-1)     # pick random existing sphere
-    v = randn(3)
-    v *= (2 + deltamin) / norm(v)   # displacement vec
-    trialc = (Xc[j, :] + v)'        # new center, row vec
-    mindist = Inf
-    if k > 2                     # exist others to check dists...
-        otherXc = Xc[(1:K.!=j) .& (1:K.<k), :]   # exclude sphere j
-        #println("k=$k, j=$j, o=",otherXc, ", tc=", trialc)
-        mindist = sqrt(minimum(sum((trialc .- otherXc).^2, dims=2)))
-    end
-    if mindist >= 2 + deltamin
-        Xc[k,:] = trialc            # keep that sphere
-        k += 1
-    end                             # else try again...
-end
+Xc = sphere_cluster_broms(K,deltamin)
 
 # set up all KN proxy, all KM colloc, and (>KM) surf test nodes...
 XX = zeros(K*M,3)    # all surf (colloc) nodes
@@ -173,7 +155,7 @@ if verb>0
     #update_cam!(a2.scene, cameracontrols(a2.scene))
     # had to view from below to get scatter point 3d z-buffer to look ok :(
     update_cam!(a2.scene, 0, -0.4)    # view angle (phi, theta) in radius
-    save("pics/resid_P10_d0.1_N1000z.png",fig2; update=false)    # <- crucial!
+    save("pics/resid_P10_d0.1_N1000b.png",fig2; update=false)    # <- crucial!
 
     GLMakie.activate!(title="multi3d: u_n (charge dens) @ test pts")
     fig3 = Figure(fontsize=20,size=(700,500))
@@ -186,7 +168,7 @@ if verb>0
     display(GLMakie.Screen(), fig3)
     zoom!(a3.scene,0.5)
     update_cam!(a3.scene, 0, -0.4)
-    save("pics/un_P10_d0.1_N1000z.png",fig3; update=false)       # <- crucial!
+    save("pics/un_P10_d0.1_N1000b.png",fig3; update=false)       # <- crucial!
 end
 
 if K==2 && !elast && !roundtripchk  # chk analytic capacitance (Lebedev et al '65 as in Cheng'01)

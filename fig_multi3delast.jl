@@ -25,25 +25,7 @@ Nas = 200:200:2000                    # conv param (upper limit for N each time)
 # (K=10, Nas=200:200:2000 takes ~2 min to run)
 
 # make cluster of K unit spheres, some pair separations=deltamin (dumb K^2 alg)
-Xc = zeros(K, 3)  # center coords of spheres (todo: make func)
-k = 2             # index of next sphere to create
-Random.seed!(0)
-while k <= K
-    j = rand(1:k-1)     # pick random existing sphere
-    v = randn(3)
-    v *= (2 + deltamin) / norm(v)   # displacement vec
-    trialc = (Xc[j, :] + v)'        # new center, row vec
-    mindist = Inf
-    if k > 2                     # exist others to check dists...
-        otherXc = Xc[(1:K.!=j) .& (1:K.<k), :]   # exclude sphere j
-        #println("k=$k, j=$j, o=",otherXc, ", tc=", trialc)
-        mindist = sqrt(minimum(sum((trialc .- otherXc).^2, dims=2)))
-    end
-    if mindist >= 2 + deltamin
-        Xc[k,:] = trialc            # keep that sphere
-        k += 1
-    end                             # else try again...
-end
+Xc = sphere_cluster_tree(K,deltamin)
 
 errs = collect(0.0*Nas)         # LNT style allocate
 Ns = similar(Nas); iters = similar(Nas); vss = zeros(Float64,length(Nas),K)
