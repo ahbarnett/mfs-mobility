@@ -136,6 +136,9 @@ end                # .................................................
 
 #  optional load/save to avoid 1 min recomputation time...
 writedlm("data/P10b.d0.1.R0.7.dat", [Ns errs iters vss])
+
+# To avoid data regen, just run this (with usings at the top,
+# plus deltamin setting from the top)... 4/25/25
 data = readdlm("data/P10b.d0.1.R0.7.dat")
 Ns = data[:,1]; errs = data[:,2]; iters=data[:,3]; vss=data[:,4:end]
 #Ns = [maximum(Naa[Naa.<Na]) for Na in Nas]        # or if needed
@@ -143,26 +146,27 @@ Ns = data[:,1]; errs = data[:,2]; iters=data[:,3]; vss=data[:,4:end]
 Racc = 1+deltamin/2 - sqrt(deltamin+deltamin^2/4)   # img accum pt given delta
 
 if true # max resid conv plot...
-fig=Figure(fontsize=20)
-ax=Axis(fig[1,1],yscale=log10,xscale=sqrt,xlabel=L"N")
-scatterlines!(Ns,errs,markersize=10,label=L"max resid err$$")
+fig=Figure(fontsize=25)
+ax=Axis(fig[1,1],yscale=log10,xscale=sqrt,xlabel=L"$N$ (proxy points)",ylabel=L"max. residual error$$")
+scatterlines!(Ns,errs,markersize=10)  #label=L"max. residual error$$"
 lines!(Ns,0.2*Racc.^sqrt.(Ns),color=:green,linestyle=:dash,
-    label=L"$O(R_\text{acc}^{\sqrt{N}})$")
+    label=L"$O(R_\text{acc}^{\sqrt{N}}\;)$")
 axislegend()
+#tightlimits!(ax)
 display(fig)
 save("pics/P10b_d0.1_R0.7_resid_conv.pdf",fig)
-end
 
-fig=Figure(fontsize=20)
-ax=Axis(fig[1,1],yscale=log10,xscale=sqrt,xlabel=L"N")
+fig=Figure(fontsize=25)
+ax=Axis(fig[1,1],yscale=log10,xscale=sqrt,xlabel=L"$N$ (proxy points)",ylabel=L"max. $\phi_k$ error")
 perrs = maximum(abs.(vss .- vss[end,:]'),dims=2)
 j = 1:(length(Ns)-1)
-scatterlines!(Ns[j],perrs[j],markersize=10,label=L"max $\phi_k$ error")
+scatterlines!(Ns[j],perrs[j],markersize=10) #label=L"max $\phi_k$ error")
 lines!(Ns[j],0.2*Racc.^sqrt.(Ns[j]),color=:green,linestyle=:dash,
-    label=L"$O(R_\text{acc}^{\sqrt{N}})$")
+    label=L"$O(R_\text{acc}^{\sqrt{N}}\;)$")
 lines!(Ns[j],0.1*Racc.^(2*sqrt.(Ns[j])),color=:red,linestyle=:dot,
-    label=L"$O(R_\text{acc}^{2\sqrt{N}})$")
+    label=L"$O(R_\text{acc}^{2\sqrt{N}}\;)$")
 axislegend()
+#tightlimits!(ax)
 display(fig)
 save("pics/P10b_d0.1_R0.7_phi_selfconv.pdf",fig)
-
+end
